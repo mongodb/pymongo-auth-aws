@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pymongo_auth_aws.auth import auth_aws, AwsCredential
-from pymongo_auth_aws.errors import PyMongoAuthAwsError
-from pymongo_auth_aws.version import __version__
+"""Exceptions raised by pymongo-auth-aws."""
+
+
+class PyMongoAuthAwsError(Exception):
+    """Base class for all pymongo-auth-aws exceptions."""
