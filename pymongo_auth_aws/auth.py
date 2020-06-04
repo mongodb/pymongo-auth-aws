@@ -25,12 +25,6 @@ from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 from botocore.credentials import Credentials
 
-# TODO: Remove pymongo dependency.
-import bson
-
-from bson.binary import Binary
-from bson.son import SON
-
 from pymongo_auth_aws.errors import PyMongoAuthAwsError
 
 
@@ -150,37 +144,83 @@ def _aws_auth_header(credentials, server_nonce, sts_host):
     return final
 
 
-def auth_aws(credentials, sock_info):
-    """Authenticate using MONGODB-AWS.
+class AwsSaslContext(object):
+    """MONGODB-AWS authentication support.
+
+    :Parameters:
+      - `credentials`: The :class:`AwsCredential` to use for authentication.
     """
-    # If a username and password are not provided, drivers MUST query
-    # a link-local AWS address for temporary credentials.
-    if credentials.username is None:
-        credentials = _aws_temp_credentials()
+    def __init__(self, credentials):
+        self._credentials = credentials
+        self._step = 0
+        self._client_nonce = None
 
-    # Client first.
-    client_nonce = os.urandom(32)
-    payload = {'r': Binary(client_nonce), 'p': 110}
-    client_first = SON([('saslStart', 1),
-                        ('mechanism', 'MONGODB-AWS'),
-                        ('payload', Binary(bson.encode(payload)))])
-    server_first = sock_info.command('$external', client_first)
+    def step(self, server_payload):
+        """Step through the SASL conversation.
 
-    server_payload = bson.decode(server_first['payload'])
-    server_nonce = server_payload['s']
-    if len(server_nonce) != 64 or not server_nonce.startswith(client_nonce):
-        raise PyMongoAuthAwsError("Server returned an invalid nonce.")
-    sts_host = server_payload['h']
-    if len(sts_host) < 1 or len(sts_host) > 255 or '..' in sts_host:
-        # Drivers must also validate that the host is greater than 0 and less
-        # than or equal to 255 bytes per RFC 1035.
-        raise PyMongoAuthAwsError("Server returned an invalid sts host.")
+        :Parameters:
+          - `server_payload`: The server payload (SASL challenge). Must be a
+            bytes-like object.
 
-    payload = _aws_auth_header(credentials, server_nonce, sts_host)
-    client_second = SON([('saslContinue', 1),
-                         ('conversationId', server_first['conversationId']),
-                         ('payload', Binary(bson.encode(payload)))])
-    res = sock_info.command('$external', client_second)
-    if not res['done']:
-        raise PyMongoAuthAwsError(
-            'MONGODB-AWS conversation failed to complete')
+        :Returns:
+          The response payload for the next SASL step.
+
+        :Raises:
+          :class:`~pymongo_auth_aws.PyMongoAuthAwsError` on error.
+        """
+        self._step += 1
+        if self._step == 1:
+            return self._first_payload()
+        elif self._step == 2:
+            return self._second_payload(server_payload)
+        else:
+            raise PyMongoAuthAwsError('MONGODB-AWS failed: too many steps')
+        pass
+
+    def _first_payload(self):
+        """Return the first SASL payload."""
+        # If a username and password are not provided, drivers MUST query
+        # a link-local AWS address for temporary credentials.
+        if self._credentials.username is None:
+            self._credentials = _aws_temp_credentials()
+
+        # Client first.
+        client_nonce = os.urandom(32)
+        self._client_nonce = client_nonce
+        payload = {'r': self.binary_type()(client_nonce), 'p': 110}
+        return self.binary_type()(self.bson_encode(payload))
+
+    def _second_payload(self, server_payload):
+        """Return the second and final SASL payload."""
+        if not server_payload:
+            raise PyMongoAuthAwsError(
+                'MONGODB-AWS failed: server payload empty')
+
+        server_payload = self.bson_decode(server_payload)
+        server_nonce = server_payload['s']
+        if len(server_nonce) != 64 or not server_nonce.startswith(
+                self._client_nonce):
+            raise PyMongoAuthAwsError("Server returned an invalid nonce.")
+
+        sts_host = server_payload['h']
+        if len(sts_host) < 1 or len(sts_host) > 255 or '..' in sts_host:
+            # Drivers must also validate that the host is greater than 0 and
+            # less than or equal to 255 bytes per RFC 1035.
+            raise PyMongoAuthAwsError(
+                "Server returned an invalid sts host: %s" % (sts_host,))
+
+        payload = _aws_auth_header(self._credentials, server_nonce, sts_host)
+        return self.binary_type()(self.bson_encode(payload))
+
+    # Dependency injection:
+    def binary_type(self):
+        """Return the bson.binary.Binary type."""
+        raise NotImplementedError
+
+    def bson_encode(self, doc):
+        """Encode a dictionary to BSON."""
+        raise NotImplementedError
+
+    def bson_decode(self, data):
+        """Decode BSON to a dictionary."""
+        raise NotImplementedError
