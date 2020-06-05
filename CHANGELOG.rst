@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Changes in Version 1.0.0.dev0
------------------------------
+Changes in Version 1.0.0
+------------------------
 
 - Initial version.
 - Implements `MONGODB-AWS authentication`_ support for PyMongo.
