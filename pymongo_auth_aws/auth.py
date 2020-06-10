@@ -105,12 +105,20 @@ _AWS_SERVICE = 'sts'
 
 def _get_region(sts_host):
     """Return the AWS region to use for the given host."""
+    # Drivers must also validate that the host is greater than 0 and
+    # less than or equal to 255 bytes per RFC 1035.
+    if not sts_host or len(sts_host) > 255:
+        raise PyMongoAuthAwsError(
+            "Server returned an invalid sts host: %s" % (sts_host,))
+
     parts = sts_host.split('.')
     if len(parts) == 1 or sts_host == 'sts.amazonaws.com':
         return 'us-east-1'  # Default
 
-    if len(parts) > 2 or not all(parts):
-        raise PyMongoAuthAwsError("Server returned an invalid sts host")
+    # Check for empty labels (eg "invalid..host" or ".invalid.host").
+    if not all(parts):
+        raise PyMongoAuthAwsError(
+            "Server returned an invalid sts host: %s" % (sts_host,))
 
     return parts[1]
 
@@ -203,12 +211,6 @@ class AwsSaslContext(object):
             raise PyMongoAuthAwsError("Server returned an invalid nonce.")
 
         sts_host = server_payload['h']
-        if len(sts_host) < 1 or len(sts_host) > 255 or '..' in sts_host:
-            # Drivers must also validate that the host is greater than 0 and
-            # less than or equal to 255 bytes per RFC 1035.
-            raise PyMongoAuthAwsError(
-                "Server returned an invalid sts host: %s" % (sts_host,))
-
         payload = _aws_auth_header(self._credentials, server_nonce, sts_host)
         return self.binary_type()(self.bson_encode(payload))
 
