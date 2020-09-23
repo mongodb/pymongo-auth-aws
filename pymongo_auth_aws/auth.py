@@ -70,8 +70,8 @@ def _aws_temp_credentials():
         try:
             # Get token
             headers = {'X-aws-ec2-metadata-token-ttl-seconds': "30"}
-            res = requests.post(_AWS_EC2_URI+'latest/api/token',
-                                headers=headers, timeout=_AWS_HTTP_TIMEOUT)
+            res = requests.put(_AWS_EC2_URI+'latest/api/token',
+                               headers=headers, timeout=_AWS_HTTP_TIMEOUT)
             token = res.content
             # Get role name
             headers = {'X-aws-ec2-metadata-token': token}
