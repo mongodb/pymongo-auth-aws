@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Changes in Version 1.0.2
+------------------------
+
+- Fix a bug which caused MONGODB-AWS authentication to fail in some
+  EC2 Instance configurations. Previous versions incorrectly used a POST
+  request when creating the session token for Instance Metadata Service
+  Version 2 (IMDSv2).
+
 Changes in Version 1.0.1
 ------------------------
 

@@ -56,9 +56,10 @@ def _aws_temp_credentials():
             res = requests.get(_AWS_REL_URI+relative_uri,
                                timeout=_AWS_HTTP_TIMEOUT)
             res_json = res.json()
-        except (ValueError, requests.exceptions.RequestException):
+        except (ValueError, requests.exceptions.RequestException) as exc:
             raise PyMongoAuthAwsError(
-                'temporary MONGODB-AWS credentials could not be obtained')
+                'temporary MONGODB-AWS credentials could not be obtained, '
+                'error: %s' % (exc,))
     else:
         # If the environment variable AWS_CONTAINER_CREDENTIALS_RELATIVE_URI is
         # not set drivers MUST assume we are on an EC2 instance and use the
@@ -70,8 +71,8 @@ def _aws_temp_credentials():
         try:
             # Get token
             headers = {'X-aws-ec2-metadata-token-ttl-seconds': "30"}
-            res = requests.post(_AWS_EC2_URI+'latest/api/token',
-                                headers=headers, timeout=_AWS_HTTP_TIMEOUT)
+            res = requests.put(_AWS_EC2_URI+'latest/api/token',
+                               headers=headers, timeout=_AWS_HTTP_TIMEOUT)
             token = res.content
             # Get role name
             headers = {'X-aws-ec2-metadata-token': token}
@@ -82,9 +83,10 @@ def _aws_temp_credentials():
             res = requests.get(_AWS_EC2_URI+_AWS_EC2_PATH+role,
                                headers=headers, timeout=_AWS_HTTP_TIMEOUT)
             res_json = res.json()
-        except (ValueError, requests.exceptions.RequestException):
+        except (ValueError, requests.exceptions.RequestException) as exc:
             raise PyMongoAuthAwsError(
-                'temporary MONGODB-AWS credentials could not be obtained')
+                'temporary MONGODB-AWS credentials could not be obtained, '
+                'error: %s' % (exc,))
 
     try:
         temp_user = res_json['AccessKeyId']
