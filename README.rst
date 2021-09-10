@@ -48,7 +48,7 @@ Please include all of the following information when opening an issue:
 
 - The exact version of pymongo-auth-aws used::
 
-  $ python -c "import pymongo-auth-aws; print(pymongo_auth_aws.__version__)"
+  $ python -c "import pymongo_auth_aws; print(pymongo_auth_aws.__version__)"
 
 - The exact version of PyMongo used::
 
