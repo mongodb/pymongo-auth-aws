@@ -19,7 +19,7 @@ jobs:
       - name: install requests
         if: matrix.python-version == 3.4
         run: 
-	  python -m pip install requests==2.12	
+          python -m pip install requests==2.12	
       - name: Test with python
         run: |
           python -m pip install botocore
