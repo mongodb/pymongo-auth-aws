@@ -1,6 +1,6 @@
 name: pymongo-auth-aws
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
