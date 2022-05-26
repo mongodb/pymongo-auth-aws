@@ -18,6 +18,7 @@ import os
 
 from base64 import standard_b64encode
 from collections import namedtuple
+from datetime import datetime, timezone
 
 import requests
 
@@ -34,17 +35,39 @@ _AWS_EC2_PATH = 'latest/meta-data/iam/security-credentials/'
 _AWS_HTTP_TIMEOUT = 10
 
 
-AwsCredential = namedtuple('AwsCredential', ['username', 'password', 'token'])
+AwsCredential = namedtuple('AwsCredential', ['username', 'password', 'token', 'expiration'])
 """MONGODB-AWS credentials."""
+
+_cached_credential = None
+_credential_buffer_seconds = 60 * 5
 
 
 def _aws_temp_credentials():
     """Construct temporary MONGODB-AWS credentials."""
+    global _cached_credential
     access_key = os.environ.get('AWS_ACCESS_KEY_ID')
     secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
     if access_key and secret_key:
+        _cached_credential = None
         return AwsCredential(
-            access_key, secret_key, os.environ.get('AWS_SESSION_TOKEN'))
+            access_key, secret_key, os.environ.get('AWS_SESSION_TOKEN'), None)
+
+    # Check to see if we have valid cached_credentials.
+    if _cached_credential and _cached_credential.expiration is not None:
+        now_utc = datetime.now(timezone.utc)
+        exp_utc = datetime.fromisoformat(_cached_credential.expiration)
+        should_refresh = False
+        if now_utc > exp_utc:
+            should_refresh = True
+        else:
+            delta = exp_utc - now_utc
+            if delta.seconds < _credential_buffer_seconds:
+                should_refresh = True
+        if not should_refresh:
+            return _cached_credential
+
+    _cached_credential = None
+
     # If the environment variable
     # AWS_CONTAINER_CREDENTIALS_RELATIVE_URI is set then drivers MUST
     # assume that it was set by an AWS ECS agent and use the URI
@@ -92,13 +115,16 @@ def _aws_temp_credentials():
         temp_user = res_json['AccessKeyId']
         temp_password = res_json['SecretAccessKey']
         token = res_json['Token']
+        expiration = res_json['Expiration']
     except KeyError:
         # If temporary credentials cannot be obtained then drivers MUST
         # fail authentication and raise an error.
         raise PyMongoAuthAwsError(
             'temporary MONGODB-AWS credentials could not be obtained')
 
-    return AwsCredential(temp_user, temp_password, token)
+    _cached_credential = AwsCredential(temp_user, temp_password, token, expiration)
+
+    return _cached_credential
 
 
 _AWS4_HMAC_SHA256 = 'AWS4-HMAC-SHA256'
@@ -189,10 +215,15 @@ class AwsSaslContext(object):
 
     def _first_payload(self):
         """Return the first SASL payload."""
+        global _cached_credential
         # If a username and password are not provided, drivers MUST query
         # a link-local AWS address for temporary credentials.
         if self._credentials.username is None:
-            self._credentials = _aws_temp_credentials()
+            try:
+                self._credentials = _aws_temp_credentials()
+            except Exception:
+                _cached_credential = None
+                raise
 
         # Client first.
         client_nonce = os.urandom(32)
@@ -202,7 +233,9 @@ class AwsSaslContext(object):
 
     def _second_payload(self, server_payload):
         """Return the second and final SASL payload."""
+        global _cached_credential
         if not server_payload:
+            _cached_credential = None
             raise PyMongoAuthAwsError(
                 'MONGODB-AWS failed: server payload empty')
 
@@ -210,10 +243,15 @@ class AwsSaslContext(object):
         server_nonce = server_payload['s']
         if len(server_nonce) != 64 or not server_nonce.startswith(
                 self._client_nonce):
+            _cached_credential = None
             raise PyMongoAuthAwsError("Server returned an invalid nonce.")
 
         sts_host = server_payload['h']
-        payload = _aws_auth_header(self._credentials, server_nonce, sts_host)
+        try:
+            payload = _aws_auth_header(self._credentials, server_nonce, sts_host)
+        except Exception:
+            _cached_credential = None
+            raise
         return self.binary_type()(self.bson_encode(payload))
 
     # Dependency injection:

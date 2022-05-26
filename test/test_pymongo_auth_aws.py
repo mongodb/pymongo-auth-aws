@@ -52,6 +52,14 @@ class TestAuthAws(unittest.TestCase):
         self.assertRaises(PyMongoAuthAwsError, _get_region, '.first.second')
         self.assertRaises(PyMongoAuthAwsError, _get_region, 'first.second.')
 
+    def test_aws_temp_credentials(self):
+        # Use boto stubber to test the auth workflow.
+        raise NotImplementedError
+
+    def test_cache_credentials(self):
+        # Use boto stubber to test the auth workflow.
+        raise NotImplementedError
+
 
 if __name__ == "__main__":
     unittest.main()
