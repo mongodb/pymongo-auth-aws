@@ -19,8 +19,10 @@ import os
 from base64 import standard_b64encode
 from collections import namedtuple
 
+import boto3
 import requests
 
+from botocore.exceptions import ClientError
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 from botocore.credentials import Credentials
@@ -45,6 +47,26 @@ def _aws_temp_credentials():
     if access_key and secret_key:
         return AwsCredential(
             access_key, secret_key, os.environ.get('AWS_SESSION_TOKEN'))
+    # Check if environment variables exposed by IRSA are present
+    irsa_web_id_file = os.getenv('AWS_WEB_IDENTITY_TOKEN_FILE')
+    irsa_role_arn = os.getenv('AWS_ROLE_ARN')
+    if irsa_web_id_file and irsa_role_arn:
+        print("in irsa flow with values: ", irsa_web_id_file, irsa_role_arn)
+        try:
+            with open(irsa_web_id_file) as f:
+                irsa_web_id_token = f.read()
+            access_key, secret_key, session_token = _irsa_assume_role(
+                irsa_role_arn,
+                irsa_web_id_token,
+                'pymongo-auth-aws'
+            )
+        except ClientError as error:
+            error_message = error.response['Error']['Message']
+            raise PyMongoAuthAwsError(
+                'temporary MONGODB-AWS credentials could not be obtained, '
+                'error: %s' % (error_message,))
+        print("no error in irsa flow!")
+        return AwsCredential(access_key, secret_key, session_token)
     # If the environment variable
     # AWS_CONTAINER_CREDENTIALS_RELATIVE_URI is set then drivers MUST
     # assume that it was set by an AWS ECS agent and use the URI
@@ -99,6 +121,22 @@ def _aws_temp_credentials():
             'temporary MONGODB-AWS credentials could not be obtained')
 
     return AwsCredential(temp_user, temp_password, token)
+
+
+def _irsa_assume_role(role_arn, token, role_session_name):
+    """Call sts:AssumeRoleWithWebIdentity and return temporary credentials"""
+    sts_client = boto3.client('sts')
+    resp = sts_client.assume_role_with_web_identity(
+        RoleArn=role_arn,
+        RoleSessionName=role_session_name,
+        WebIdentityToken=token
+    )
+    creds = resp['Credentials']
+    access_key = creds['AccessKeyId']
+    secret_key = creds['SecretAccessKey']
+    session_token = creds['SessionToken']
+
+    return access_key, secret_key, session_token
 
 
 _AWS4_HMAC_SHA256 = 'AWS4-HMAC-SHA256'
