@@ -47,26 +47,26 @@ def _aws_temp_credentials():
     if access_key and secret_key:
         return AwsCredential(
             access_key, secret_key, os.environ.get('AWS_SESSION_TOKEN'))
-    # Check if environment variables exposed by IRSA are present
+    # Check if environment variables exposed by IAM Roles for Service Accounts (IRSA) are present.
+    # See https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html for details.
     irsa_web_id_file = os.getenv('AWS_WEB_IDENTITY_TOKEN_FILE')
     irsa_role_arn = os.getenv('AWS_ROLE_ARN')
     if irsa_web_id_file and irsa_role_arn:
-        print("in irsa flow with values: ", irsa_web_id_file, irsa_role_arn)
         try:
             with open(irsa_web_id_file) as f:
                 irsa_web_id_token = f.read()
-            access_key, secret_key, session_token = _irsa_assume_role(
-                irsa_role_arn,
-                irsa_web_id_token,
-                'pymongo-auth-aws'
-            )
+        # Check for errors raised by `open` from older Python versions.
+        except (OSError, IOError, InterruptedError) as exc:
+            raise PyMongoAuthAwsError(
+                'temporary MONGODB-AWS credentials could not be obtained, '
+                'error: %s' % (exc,))
+        try:
+            return _irsa_assume_role(irsa_role_arn, irsa_web_id_token, 'pymongo-auth-aws')
         except ClientError as error:
             error_message = error.response['Error']['Message']
             raise PyMongoAuthAwsError(
                 'temporary MONGODB-AWS credentials could not be obtained, '
                 'error: %s' % (error_message,))
-        print("no error in irsa flow!")
-        return AwsCredential(access_key, secret_key, session_token)
     # If the environment variable
     # AWS_CONTAINER_CREDENTIALS_RELATIVE_URI is set then drivers MUST
     # assume that it was set by an AWS ECS agent and use the URI
@@ -124,7 +124,7 @@ def _aws_temp_credentials():
 
 
 def _irsa_assume_role(role_arn, token, role_session_name):
-    """Call sts:AssumeRoleWithWebIdentity and return temporary credentials"""
+    """Call sts:AssumeRoleWithWebIdentity and return temporary credentials."""
     sts_client = boto3.client('sts')
     resp = sts_client.assume_role_with_web_identity(
         RoleArn=role_arn,
@@ -136,7 +136,7 @@ def _irsa_assume_role(role_arn, token, role_session_name):
     secret_key = creds['SecretAccessKey']
     session_token = creds['SessionToken']
 
-    return access_key, secret_key, session_token
+    return AwsCredential(access_key, secret_key, session_token)
 
 
 _AWS4_HMAC_SHA256 = 'AWS4-HMAC-SHA256'
