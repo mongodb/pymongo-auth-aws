@@ -19,6 +19,9 @@ setup(
     long_description=LONG_DESCRIPTION,
     packages=find_packages(exclude=['test']),
     install_requires=['requests<3.0.0', 'botocore'],
+    extras_require={
+        "test": ["requests_mock"]
+    },
     author="Shane Harvey",
     author_email="drivers-python-noreply@mongodb.com",
     url="https://github.com/mongodb/pymongo-auth-aws",

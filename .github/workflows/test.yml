@@ -23,5 +23,5 @@ jobs:
         if: ${{ matrix.python-version == 3.4 || matrix.python-version == 3.5}} 
       - name: Test with python
         run: |
-          python -m pip install -e .
+          python -m pip install -e ".[test]"
           python setup.py test

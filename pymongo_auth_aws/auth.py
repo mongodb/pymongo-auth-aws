@@ -25,6 +25,7 @@ import requests
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 from botocore.credentials import Credentials
+from botocore.utils import parse_to_aware_datetime
 
 from pymongo_auth_aws.errors import PyMongoAuthAwsError
 
@@ -33,7 +34,7 @@ _AWS_REL_URI = 'http://169.254.170.2/'
 _AWS_EC2_URI = 'http://169.254.169.254/'
 _AWS_EC2_PATH = 'latest/meta-data/iam/security-credentials/'
 _AWS_HTTP_TIMEOUT = 10
-
+_AWS_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%SZ"
 
 AwsCredential = namedtuple('AwsCredential', ['username', 'password', 'token', 'expiration'])
 """MONGODB-AWS credentials."""
@@ -55,7 +56,7 @@ def _aws_temp_credentials():
     # Check to see if we have valid cached_credentials.
     if _cached_credential and _cached_credential.expiration is not None:
         now_utc = datetime.now(timezone.utc)
-        exp_utc = datetime.fromisoformat(_cached_credential.expiration)
+        exp_utc = parse_to_aware_datetime(_cached_credential.expiration)
         should_refresh = False
         if now_utc > exp_utc:
             should_refresh = True
@@ -111,6 +112,7 @@ def _aws_temp_credentials():
                 'temporary MONGODB-AWS credentials could not be obtained, '
                 'error: %s' % (exc,))
 
+    # See https://docs.aws.amazon.com/cli/latest/reference/sts/assume-role.html#examples for expected result format.
     try:
         temp_user = res_json['AccessKeyId']
         temp_password = res_json['SecretAccessKey']
