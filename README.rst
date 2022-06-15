@@ -10,7 +10,7 @@ About
 =====
 
 MONGODB-AWS authentication support for PyMongo. pymongo-auth-aws uses
-`boto3`_ and `requests`_.
+`boto3`_, `botocore`_, and `requests`_.
 
 Support / Feedback
 ==================
