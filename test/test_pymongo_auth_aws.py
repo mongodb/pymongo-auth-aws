@@ -173,7 +173,10 @@ class TestAwsSaslContext(unittest.TestCase):
         test = _AwsSaslContext(creds)
         response = bson.decode(test.step(None))
         nonce = response['r'] + os.urandom(32)
-        payload = bson.encode(dict(s=nonce, h=b'foo.com'))
+        # Python 2.7 support.
+        if isinstance(nonce, str):
+            nonce = Binary(nonce)
+        payload = bson.encode(dict(s=nonce, h='foo.com'))
         response = test.step(payload)
         self.assertIsInstance(response, Binary)
 
