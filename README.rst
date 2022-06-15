@@ -95,7 +95,7 @@ Testing
 Install the test dependencies and run the test suite.
 
   $ python -m pip install -e ".[test]"
-  $ python setup.py test
+  $ python -m unittest discover ./test
 
 .. _MongoDB Community Forums:
    https://developer.mongodb.com/community/forums/tag/python-driver

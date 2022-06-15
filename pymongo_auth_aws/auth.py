@@ -45,9 +45,9 @@ _credential_buffer_seconds = 60 * 5
 
 
 ZERO = timedelta(0)
-HOUR = timedelta(hours=1)
 
 # A Python 2.7-compliant UTC class (from stdlib docs).
+# When we drop Python 2.7 support we can use `timezone.utc` instead.
 
 class _UTC(tzinfo):
     """UTC"""
@@ -67,28 +67,24 @@ utc = _UTC()
 def _aws_temp_credentials():
     """Construct temporary MONGODB-AWS credentials."""
     global _cached_credential
+    cached = _cached_credential
+
     access_key = os.environ.get('AWS_ACCESS_KEY_ID')
     secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
     if access_key and secret_key:
-        _cached_credential = None
+        cached = None
         return AwsCredential(
             access_key, secret_key, os.environ.get('AWS_SESSION_TOKEN'), None)
 
     # Check to see if we have valid cached_credentials.
-    if _cached_credential and _cached_credential.expiration is not None:
+    if cached and cached.expiration is not None:
         now_utc = datetime.now(utc)
-        exp_utc = parse_to_aware_datetime(_cached_credential.expiration)
-        should_refresh = False
-        if now_utc > exp_utc:
-            should_refresh = True
-        else:
-            delta = exp_utc - now_utc
-            if delta.seconds < _credential_buffer_seconds:
-                should_refresh = True
-        if not should_refresh:
-            return _cached_credential
+        exp_utc = parse_to_aware_datetime(cached.expiration)
+        if (exp_utc - now_utc).total_seconds() >= _credential_buffer_seconds:
+            _cached_credential = cached
+            return cached
 
-    _cached_credential = None
+    cached = None
 
     # If the environment variable
     # AWS_CONTAINER_CREDENTIALS_RELATIVE_URI is set then drivers MUST

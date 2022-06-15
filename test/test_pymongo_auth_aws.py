@@ -56,16 +56,22 @@ class TestAuthAws(unittest.TestCase):
         self.assertRaises(PyMongoAuthAwsError, _get_region, '.first.second')
         self.assertRaises(PyMongoAuthAwsError, _get_region, 'first.second.')
 
+    def ensure_equal(self, creds, expected):
+        self.assertEqual(creds.username, expected['AccessKeyId'])
+        self.assertEqual(creds.password, expected['SecretAccessKey'])
+        self.assertEqual(creds.token, expected['Token'])
+        self.assertEqual(creds.expiration, expected['Expiration'])
+
     def test_aws_temp_credentials_env_variables(self):
         os.environ['AWS_ACCESS_KEY_ID'] = 'foo'
         os.environ['AWS_SECRET_ACCESS_KEY'] = 'bar'
         creds = _aws_temp_credentials()
         del os.environ['AWS_ACCESS_KEY_ID']
         del os.environ['AWS_SECRET_ACCESS_KEY']
-        assert creds.username == 'foo'
-        assert creds.password == 'bar'
-        assert creds.token is None
-        assert creds.expiration is None
+        self.assertEqual(creds.username, 'foo')
+        self.assertEqual(creds.password, 'bar')
+        self.assertEqual(creds.token, None)
+        self.assertEqual(creds.expiration, None)
 
     def test_aws_temp_credentials_relative_url(self):
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
@@ -74,10 +80,7 @@ class TestAuthAws(unittest.TestCase):
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
             creds = _aws_temp_credentials()
         del os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']
-        assert creds.username == expected['AccessKeyId']
-        assert creds.password == expected['SecretAccessKey']
-        assert creds.token == expected['Token']
-        assert creds.expiration == expected['Expiration']
+        self.ensure_equal(creds, expected)
 
     def test_aws_temp_credentials_ec2(self):
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration='2016-03-15T00:05:07Z')
@@ -86,10 +89,7 @@ class TestAuthAws(unittest.TestCase):
             m.get('%s%s' % (auth._AWS_EC2_URI, auth._AWS_EC2_PATH), text='bar')
             m.get('%s%sbar' % (auth._AWS_EC2_URI, auth._AWS_EC2_PATH), json=expected)
             creds = _aws_temp_credentials()
-        assert creds.username == expected['AccessKeyId']
-        assert creds.password == expected['SecretAccessKey']
-        assert creds.token == expected['Token']
-        assert creds.expiration == expected['Expiration']
+        self.ensure_equal(creds, expected)
 
     def test_cache_credentials(self):
         auth._cached_credential = None
@@ -99,17 +99,10 @@ class TestAuthAws(unittest.TestCase):
         with requests_mock.Mocker() as m:
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
             creds = _aws_temp_credentials()
-
-        assert creds.username == expected['AccessKeyId']
-        assert creds.password == expected['SecretAccessKey']
-        assert creds.token == expected['Token']
-        assert creds.expiration == expected['Expiration']
+        self.ensure_equal(creds, expected)
 
         creds = _aws_temp_credentials()
-        assert creds.username == expected['AccessKeyId']
-        assert creds.password == expected['SecretAccessKey']
-        assert creds.token == expected['Token']
-        assert creds.expiration == expected['Expiration']
+        self.ensure_equal(creds, expected)
 
         del os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']
         auth._cached_credential = None
@@ -123,20 +116,14 @@ class TestAuthAws(unittest.TestCase):
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
             creds = _aws_temp_credentials()
 
-        assert creds.username == expected['AccessKeyId']
-        assert creds.password == expected['SecretAccessKey']
-        assert creds.token == expected['Token']
-        assert creds.expiration == expected['Expiration']
+        self.ensure_equal(creds, expected)
 
         expected['AccessKeyId'] = 'fizz'
         with requests_mock.Mocker() as m:
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
             creds = _aws_temp_credentials()
 
-        assert creds.username == expected['AccessKeyId']
-        assert creds.password == expected['SecretAccessKey']
-        assert creds.token == expected['Token']
-        assert creds.expiration == expected['Expiration']
+        self.ensure_equal(creds, expected)
 
         del os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']
         auth._cached_credential = None
@@ -150,20 +137,14 @@ class TestAuthAws(unittest.TestCase):
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
             creds = _aws_temp_credentials()
 
-        assert creds.username == expected['AccessKeyId']
-        assert creds.password == expected['SecretAccessKey']
-        assert creds.token == expected['Token']
-        assert creds.expiration == expected['Expiration']
+        self.ensure_equal(creds, expected)
 
         expected['AccessKeyId'] = 'fizz'
         with requests_mock.Mocker() as m:
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
             creds = _aws_temp_credentials()
 
-        assert creds.username == expected['AccessKeyId']
-        assert creds.password == expected['SecretAccessKey']
-        assert creds.token == expected['Token']
-        assert creds.expiration == expected['Expiration']
+        self.ensure_equal(creds, expected)
 
         del os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']
         auth._cached_credential = None

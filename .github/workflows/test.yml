@@ -25,4 +25,4 @@ jobs:
       - name: Test with python
         run: |
           python -m pip install -e ".[test]"
-          python -m unittest discover .
+          python -m unittest discover ./test
