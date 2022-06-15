@@ -169,4 +169,4 @@ class TestAuthAws(unittest.TestCase):
         auth._cached_credential = None
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(defaultTest='suite')
