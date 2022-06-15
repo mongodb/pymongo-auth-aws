@@ -14,7 +14,7 @@
 
 """Test the pymongo-auth-aws module."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import os
 import sys
 
