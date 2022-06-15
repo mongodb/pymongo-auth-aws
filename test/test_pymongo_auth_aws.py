@@ -178,7 +178,7 @@ class TestAwsSaslContext(unittest.TestCase):
         response = bson.decode(test.step(None))
         nonce = response['r'] + os.urandom(32)
 
-        payload = bson.encode(dict(s=nonce, h=unicode('foo.com')))
+        payload = bson.encode(dict(s=unicode(nonce), h=unicode('foo.com')))
         response = test.step(payload)
         self.assertIsInstance(response, Binary)
 
