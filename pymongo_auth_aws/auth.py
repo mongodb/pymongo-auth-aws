@@ -22,7 +22,6 @@ from collections import namedtuple
 import boto3
 import requests
 
-from botocore.exceptions import ClientError
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 from botocore.credentials import Credentials
