@@ -94,7 +94,7 @@ class TestAuthAws(unittest.TestCase):
     def test_cache_credentials(self):
         auth._cached_credential = None
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
-        tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
+        tomorrow = datetime.now(auth.utc) + timedelta(days=1)
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=tomorrow.strftime(auth._AWS_DATE_FORMAT))
         with requests_mock.Mocker() as m:
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
@@ -117,7 +117,7 @@ class TestAuthAws(unittest.TestCase):
     def test_cache_expired(self):
         auth._cached_credential = None
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
-        expired = datetime.now(timezone.utc) - timedelta(hours=1)
+        expired = datetime.now(auth.utc) - timedelta(hours=1)
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=expired.strftime(auth._AWS_DATE_FORMAT))
         with requests_mock.Mocker() as m:
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
@@ -144,7 +144,7 @@ class TestAuthAws(unittest.TestCase):
     def test_cache_expires_soon(self):
         auth._cached_credential = None
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
-        soon = datetime.now(timezone.utc) + timedelta(minutes=1)
+        soon = datetime.now(auth.utc) + timedelta(minutes=1)
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=soon.strftime(auth._AWS_DATE_FORMAT))
         with requests_mock.Mocker() as m:
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)

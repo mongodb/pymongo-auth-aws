@@ -18,7 +18,8 @@ import os
 
 from base64 import standard_b64encode
 from collections import namedtuple
-from datetime import datetime, timezone
+from datetime import tzinfo, timedelta, datetime
+
 
 import requests
 
@@ -43,6 +44,26 @@ _cached_credential = None
 _credential_buffer_seconds = 60 * 5
 
 
+ZERO = timedelta(0)
+HOUR = timedelta(hours=1)
+
+# A Python 2.7-compliant UTC class (from stdlib docs).
+
+class _UTC(tzinfo):
+    """UTC"""
+
+    def utcoffset(self, dt):
+        return ZERO
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return ZERO
+
+utc = _UTC()
+
+
 def _aws_temp_credentials():
     """Construct temporary MONGODB-AWS credentials."""
     global _cached_credential
@@ -55,7 +76,7 @@ def _aws_temp_credentials():
 
     # Check to see if we have valid cached_credentials.
     if _cached_credential and _cached_credential.expiration is not None:
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(utc)
         exp_utc = parse_to_aware_datetime(_cached_credential.expiration)
         should_refresh = False
         if now_utc > exp_utc:
