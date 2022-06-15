@@ -56,11 +56,6 @@ def _aws_temp_credentials():
             with open(irsa_web_id_file) as f:
                 irsa_web_id_token = f.read()
             return _irsa_assume_role(irsa_role_arn, irsa_web_id_token, 'pymongo-auth-aws')
-        except ClientError as exc:
-            error_message = exc.response.get('error', {}).get('message') or exc
-            raise PyMongoAuthAwsError(
-                'temporary MONGODB-AWS credentials could not be obtained, '
-                'error: %s' % (error_message,))
         except Exception as exc:
             raise PyMongoAuthAwsError(
                 'temporary MONGODB-AWS credentials could not be obtained, '
