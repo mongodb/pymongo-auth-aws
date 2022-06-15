@@ -165,6 +165,11 @@ class _AwsSaslContext(AwsSaslContext):
         return bson.decode(data)
 
 
+# Support Python 2.7 unicode inputs.
+if sys.version_info[0] == 3:
+    unicode = str
+
+
 class TestAwsSaslContext(unittest.TestCase):
 
     def test_step(self):
@@ -172,7 +177,8 @@ class TestAwsSaslContext(unittest.TestCase):
         test = _AwsSaslContext(creds)
         response = bson.decode(test.step(None))
         nonce = response['r'] + os.urandom(32)
-        payload = bson.encode(dict(s=nonce, h='foo.com'))
+
+        payload = bson.encode(dict(s=nonce, h=unicode('foo.com')))
         response = test.step(payload)
         self.assertIsInstance(response, Binary)
 
