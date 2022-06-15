@@ -20,15 +20,19 @@ import sys
 
 sys.path[0:0] = [""]
 
+import bson
+from bson import Binary
 import pymongo_auth_aws
 import requests_mock
 
 from pymongo_auth_aws import auth
-from pymongo_auth_aws.auth import _get_region, _aws_temp_credentials
+from pymongo_auth_aws.auth import _get_region, _aws_temp_credentials, AwsSaslContext, AwsCredential
 from pymongo_auth_aws.errors import PyMongoAuthAwsError
 
 from test import unittest
 
+
+AWS_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%SZ"
 
 class TestAuthAws(unittest.TestCase):
 
@@ -92,26 +96,24 @@ class TestAuthAws(unittest.TestCase):
         self.ensure_equal(creds, expected)
 
     def test_cache_credentials(self):
-        auth._cached_credential = None
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
         tomorrow = datetime.now(auth.utc) + timedelta(days=1)
-        expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=tomorrow.strftime(auth._AWS_DATE_FORMAT))
+        expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=tomorrow.strftime(AWS_DATE_FORMAT))
         with requests_mock.Mocker() as m:
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
             creds = _aws_temp_credentials()
         self.ensure_equal(creds, expected)
 
-        creds = _aws_temp_credentials()
+        creds = _aws_temp_credentials(creds)
         self.ensure_equal(creds, expected)
 
         del os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']
         auth._cached_credential = None
 
     def test_cache_expired(self):
-        auth._cached_credential = None
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
         expired = datetime.now(auth.utc) - timedelta(hours=1)
-        expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=expired.strftime(auth._AWS_DATE_FORMAT))
+        expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=expired.strftime(AWS_DATE_FORMAT))
         with requests_mock.Mocker() as m:
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
             creds = _aws_temp_credentials()
@@ -126,13 +128,11 @@ class TestAuthAws(unittest.TestCase):
         self.ensure_equal(creds, expected)
 
         del os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']
-        auth._cached_credential = None
 
     def test_cache_expires_soon(self):
-        auth._cached_credential = None
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
         soon = datetime.now(auth.utc) + timedelta(minutes=1)
-        expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=soon.strftime(auth._AWS_DATE_FORMAT))
+        expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=soon.strftime(AWS_DATE_FORMAT))
         with requests_mock.Mocker() as m:
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
             creds = _aws_temp_credentials()
@@ -142,12 +142,41 @@ class TestAuthAws(unittest.TestCase):
         expected['AccessKeyId'] = 'fizz'
         with requests_mock.Mocker() as m:
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
-            creds = _aws_temp_credentials()
+            creds = _aws_temp_credentials(creds)
 
         self.ensure_equal(creds, expected)
 
         del os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']
-        auth._cached_credential = None
+
+
+
+class _AwsSaslContext(AwsSaslContext):
+
+    def binary_type(self):
+        """Return the bson.binary.Binary type."""
+        return Binary
+
+    def bson_encode(self, doc):
+        """Encode a dictionary to BSON."""
+        return bson.encode(doc)
+
+    def bson_decode(self, data):
+        """Decode BSON to a dictionary."""
+        return bson.decode(data)
+
+
+class TestAwsSaslContext(unittest.TestCase):
+
+    def test_step(self):
+        creds = AwsCredential('foo', 'bar', 'baz', None)
+        test = _AwsSaslContext(creds)
+        response = bson.decode(test.step(None))
+        nonce = response['r'] + os.urandom(32)
+        payload = bson.encode(dict(s=nonce, h='foo.com'))
+        response = test.step(payload)
+        self.assertIsInstance(response, Binary)
+
+
 
 if __name__ == "__main__":
-    unittest.main(defaultTest='suite')
+    unittest.main()

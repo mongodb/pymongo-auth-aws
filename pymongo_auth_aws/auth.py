@@ -35,12 +35,10 @@ _AWS_REL_URI = 'http://169.254.170.2/'
 _AWS_EC2_URI = 'http://169.254.169.254/'
 _AWS_EC2_PATH = 'latest/meta-data/iam/security-credentials/'
 _AWS_HTTP_TIMEOUT = 10
-_AWS_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%SZ"
 
 AwsCredential = namedtuple('AwsCredential', ['username', 'password', 'token', 'expiration'])
 """MONGODB-AWS credentials."""
 
-_cached_credential = None
 _credential_buffer_seconds = 60 * 5
 
 
@@ -64,27 +62,21 @@ class _UTC(tzinfo):
 utc = _UTC()
 
 
-def _aws_temp_credentials():
+def _aws_temp_credentials(creds=None):
     """Construct temporary MONGODB-AWS credentials."""
-    global _cached_credential
-    cached = _cached_credential
 
     access_key = os.environ.get('AWS_ACCESS_KEY_ID')
     secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
     if access_key and secret_key:
-        cached = None
         return AwsCredential(
             access_key, secret_key, os.environ.get('AWS_SESSION_TOKEN'), None)
 
-    # Check to see if we have valid cached_credentials.
-    if cached and cached.expiration is not None:
+    # Check to see if we have valid credentials.
+    if creds and creds.expiration is not None:
         now_utc = datetime.now(utc)
-        exp_utc = parse_to_aware_datetime(cached.expiration)
+        exp_utc = parse_to_aware_datetime(creds.expiration)
         if (exp_utc - now_utc).total_seconds() >= _credential_buffer_seconds:
-            _cached_credential = cached
-            return cached
-
-    cached = None
+            return creds
 
     # If the environment variable
     # AWS_CONTAINER_CREDENTIALS_RELATIVE_URI is set then drivers MUST
@@ -141,9 +133,7 @@ def _aws_temp_credentials():
         raise PyMongoAuthAwsError(
             'temporary MONGODB-AWS credentials could not be obtained')
 
-    _cached_credential = AwsCredential(temp_user, temp_password, token, expiration)
-
-    return _cached_credential
+    return AwsCredential(temp_user, temp_password, token, expiration)
 
 
 _AWS4_HMAC_SHA256 = 'AWS4-HMAC-SHA256'
@@ -199,6 +189,16 @@ def _aws_auth_header(credentials, server_nonce, sts_host):
     return final
 
 
+def _handle_credentials(func):
+    def inner(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except Exception as e:
+            self._credentials = self._orig_credentials
+            raise e
+    return inner
+
+
 class AwsSaslContext(object):
     """MONGODB-AWS authentication support.
 
@@ -206,7 +206,7 @@ class AwsSaslContext(object):
       - `credentials`: The :class:`AwsCredential` to use for authentication.
     """
     def __init__(self, credentials):
-        self._credentials = credentials
+        self._credentials = self._orig_credentials = credentials
         self._step = 0
         self._client_nonce = None
 
@@ -232,17 +232,13 @@ class AwsSaslContext(object):
             raise PyMongoAuthAwsError('MONGODB-AWS failed: too many steps')
         pass
 
+    @_handle_credentials
     def _first_payload(self):
         """Return the first SASL payload."""
-        global _cached_credential
         # If a username and password are not provided, drivers MUST query
         # a link-local AWS address for temporary credentials.
         if self._credentials.username is None:
-            try:
-                self._credentials = _aws_temp_credentials()
-            except Exception:
-                _cached_credential = None
-                raise
+            self._credentials = _aws_temp_credentials(self._credentials)
 
         # Client first.
         client_nonce = os.urandom(32)
@@ -250,11 +246,10 @@ class AwsSaslContext(object):
         payload = {'r': self.binary_type()(client_nonce), 'p': 110}
         return self.binary_type()(self.bson_encode(payload))
 
+    @_handle_credentials
     def _second_payload(self, server_payload):
         """Return the second and final SASL payload."""
-        global _cached_credential
         if not server_payload:
-            _cached_credential = None
             raise PyMongoAuthAwsError(
                 'MONGODB-AWS failed: server payload empty')
 
@@ -262,15 +257,10 @@ class AwsSaslContext(object):
         server_nonce = server_payload['s']
         if len(server_nonce) != 64 or not server_nonce.startswith(
                 self._client_nonce):
-            _cached_credential = None
             raise PyMongoAuthAwsError("Server returned an invalid nonce.")
 
         sts_host = server_payload['h']
-        try:
-            payload = _aws_auth_header(self._credentials, server_nonce, sts_host)
-        except Exception:
-            _cached_credential = None
-            raise
+        payload = _aws_auth_header(self._credentials, server_nonce, sts_host)
         return self.binary_type()(self.bson_encode(payload))
 
     # Dependency injection:
