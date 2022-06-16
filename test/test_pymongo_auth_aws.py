@@ -39,7 +39,7 @@ class TestAuthAws(unittest.TestCase):
     def setUp(self):
         auth._cached_credentials = None
         os.environ.pop('AWS_CONTAINER_CREDENTIALS_RELATIVE_URI', None)
-        return super().setUp()
+        return unittest.TestCase.setUp(self)
 
     def assertVersionLike(self, version):
         self.assertTrue(isinstance(version, str), msg=version)
