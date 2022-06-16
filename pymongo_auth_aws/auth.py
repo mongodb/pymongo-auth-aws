@@ -39,6 +39,7 @@ _AWS_HTTP_TIMEOUT = 10
 AwsCredential = namedtuple('AwsCredential', ['username', 'password', 'token', 'expiration'])
 """MONGODB-AWS credentials."""
 
+_cached_credentials = None
 _credential_buffer_seconds = 60 * 5
 
 
@@ -62,8 +63,10 @@ class _UTC(tzinfo):
 utc = _UTC()
 
 
-def _aws_temp_credentials(creds=None):
+def _aws_temp_credentials():
     """Construct temporary MONGODB-AWS credentials."""
+    global _cached_credentials
+    creds = _cached_credentials
 
     access_key = os.environ.get('AWS_ACCESS_KEY_ID')
     secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
@@ -133,7 +136,9 @@ def _aws_temp_credentials(creds=None):
         raise PyMongoAuthAwsError(
             'temporary MONGODB-AWS credentials could not be obtained')
 
-    return AwsCredential(temp_user, temp_password, token, expiration)
+    creds = AwsCredential(temp_user, temp_password, token, expiration)
+    _cached_credentials = creds
+    return creds
 
 
 _AWS4_HMAC_SHA256 = 'AWS4-HMAC-SHA256'
@@ -191,10 +196,11 @@ def _aws_auth_header(credentials, server_nonce, sts_host):
 
 def _handle_credentials(func):
     def inner(self, *args, **kwargs):
+        global _cached_credentials
         try:
             return func(self, *args, **kwargs)
         except Exception as e:
-            self._credentials = self._orig_credentials
+            _cached_credentials = None
             raise e
     return inner
 
@@ -206,7 +212,7 @@ class AwsSaslContext(object):
       - `credentials`: The :class:`AwsCredential` to use for authentication.
     """
     def __init__(self, credentials):
-        self._credentials = self._orig_credentials = credentials
+        self._credentials = credentials
         self._step = 0
         self._client_nonce = None
 
@@ -238,7 +244,7 @@ class AwsSaslContext(object):
         # If a username and password are not provided, drivers MUST query
         # a link-local AWS address for temporary credentials.
         if self._credentials.username is None:
-            self._credentials = _aws_temp_credentials(self._credentials)
+            self._credentials = _aws_temp_credentials()
 
         # Client first.
         client_nonce = os.urandom(32)

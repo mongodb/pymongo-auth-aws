@@ -36,6 +36,11 @@ AWS_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%SZ"
 
 class TestAuthAws(unittest.TestCase):
 
+    def setUp(self) -> None:
+        auth._cached_credentials = None
+        os.environ.pop('AWS_CONTAINER_CREDENTIALS_RELATIVE_URI', None)
+        return super().setUp()
+
     def assertVersionLike(self, version):
         self.assertTrue(isinstance(version, str), msg=version)
         # There should be at least one dot: "1.0" or "1.0.0" not "1".
@@ -83,7 +88,6 @@ class TestAuthAws(unittest.TestCase):
         with requests_mock.Mocker() as m:
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
             creds = _aws_temp_credentials()
-        del os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']
         self.ensure_equal(creds, expected)
 
     def test_aws_temp_credentials_ec2(self):
@@ -104,11 +108,8 @@ class TestAuthAws(unittest.TestCase):
             creds = _aws_temp_credentials()
         self.ensure_equal(creds, expected)
 
-        creds = _aws_temp_credentials(creds)
+        creds = _aws_temp_credentials()
         self.ensure_equal(creds, expected)
-
-        del os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']
-        auth._cached_credential = None
 
     def test_cache_expired(self):
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
@@ -127,9 +128,8 @@ class TestAuthAws(unittest.TestCase):
 
         self.ensure_equal(creds, expected)
 
-        del os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']
-
     def test_cache_expires_soon(self):
+        auth._cached_credentials = None
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
         soon = datetime.now(auth.utc) + timedelta(minutes=1)
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=soon.strftime(AWS_DATE_FORMAT))
@@ -142,11 +142,9 @@ class TestAuthAws(unittest.TestCase):
         expected['AccessKeyId'] = 'fizz'
         with requests_mock.Mocker() as m:
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
-            creds = _aws_temp_credentials(creds)
+            creds = _aws_temp_credentials()
 
         self.ensure_equal(creds, expected)
-
-        del os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']
 
 
 
