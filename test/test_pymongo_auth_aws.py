@@ -36,7 +36,7 @@ AWS_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%SZ"
 
 class TestAuthAws(unittest.TestCase):
 
-    def setUp(self) -> None:
+    def setUp(self):
         auth._cached_credentials = None
         os.environ.pop('AWS_CONTAINER_CREDENTIALS_RELATIVE_URI', None)
         return super().setUp()
