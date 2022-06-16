@@ -19,6 +19,7 @@ import os
 from base64 import standard_b64encode
 from collections import namedtuple
 
+import boto3
 import requests
 
 from botocore.auth import SigV4Auth
@@ -45,6 +46,20 @@ def _aws_temp_credentials():
     if access_key and secret_key:
         return AwsCredential(
             access_key, secret_key, os.environ.get('AWS_SESSION_TOKEN'))
+    # Check if environment variables exposed by IAM Roles for Service Accounts (IRSA) are present.
+    # See https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html for details.
+    irsa_web_id_file = os.getenv('AWS_WEB_IDENTITY_TOKEN_FILE')
+    irsa_role_arn = os.getenv('AWS_ROLE_ARN')
+    if irsa_web_id_file and irsa_role_arn:
+        try:
+            with open(irsa_web_id_file) as f:
+                irsa_web_id_token = f.read()
+            role_session_name = os.getenv('AWS_ROLE_SESSION_NAME', 'pymongo-auth-aws')
+            return _irsa_assume_role(irsa_role_arn, irsa_web_id_token, role_session_name)
+        except Exception as exc:
+            raise PyMongoAuthAwsError(
+                'temporary MONGODB-AWS credentials could not be obtained, '
+                'error: %s' % (exc,))
     # If the environment variable
     # AWS_CONTAINER_CREDENTIALS_RELATIVE_URI is set then drivers MUST
     # assume that it was set by an AWS ECS agent and use the URI
@@ -99,6 +114,22 @@ def _aws_temp_credentials():
             'temporary MONGODB-AWS credentials could not be obtained')
 
     return AwsCredential(temp_user, temp_password, token)
+
+
+def _irsa_assume_role(role_arn, token, role_session_name):
+    """Call sts:AssumeRoleWithWebIdentity and return temporary credentials."""
+    sts_client = boto3.client('sts')
+    resp = sts_client.assume_role_with_web_identity(
+        RoleArn=role_arn,
+        RoleSessionName=role_session_name,
+        WebIdentityToken=token
+    )
+    creds = resp['Credentials']
+    access_key = creds['AccessKeyId']
+    secret_key = creds['SecretAccessKey']
+    session_token = creds['SessionToken']
+
+    return AwsCredential(access_key, secret_key, session_token)
 
 
 _AWS4_HMAC_SHA256 = 'AWS4-HMAC-SHA256'
