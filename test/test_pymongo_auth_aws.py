@@ -18,7 +18,12 @@ from datetime import datetime, timedelta
 import os
 import sys
 import tempfile
-from unittest import mock
+
+if sys.version_info[0] < 3:
+    from mock import patch
+else:
+    from unittest.mock import patch
+
 
 sys.path[0:0] = [""]
 
@@ -169,7 +174,7 @@ class TestAuthAws(unittest.TestCase):
         expected = dict(AccessKeyId=get_key(), SecretAccessKey=get_key(), SessionToken=get_key(), Expiration=tomorrow.strftime(AWS_DATE_FORMAT))
 
         sts = botocore.session.get_session().create_client('sts')
-        with mock.patch('pymongo_auth_aws.auth.boto3') as mock_boto3:
+        with patch('pymongo_auth_aws.auth.boto3') as mock_boto3:
             with Stubber(sts) as stubber:
                 mock_boto3.client.return_value = sts
                 response = {
