@@ -15,6 +15,7 @@
 """MONGODB-AWS authentication support for PyMongo."""
 
 import os
+from functools import wraps
 
 from base64 import standard_b64encode
 from collections import namedtuple
@@ -67,6 +68,7 @@ utc = _UTC()
 def _aws_temp_credentials():
     """Construct temporary MONGODB-AWS credentials."""
     global _cached_credentials
+    # Store the variable locally for safe threaded access.
     creds = _cached_credentials
 
     access_key = os.environ.get('AWS_ACCESS_KEY_ID')
@@ -144,7 +146,7 @@ def _aws_temp_credentials():
     try:
         temp_user = res_json['AccessKeyId']
         temp_password = res_json['SecretAccessKey']
-        token = res_json['Token']
+        session_token = res_json['SessionToken']
         expiration = res_json['Expiration']
     except KeyError:
         # If temporary credentials cannot be obtained then drivers MUST
@@ -152,7 +154,7 @@ def _aws_temp_credentials():
         raise PyMongoAuthAwsError(
             'temporary MONGODB-AWS credentials could not be obtained')
 
-    creds = AwsCredential(temp_user, temp_password, token, expiration)
+    creds = AwsCredential(temp_user, temp_password, session_token, expiration)
     _cached_credentials = creds
     return creds
 
@@ -169,8 +171,9 @@ def _irsa_assume_role(role_arn, token, role_session_name):
     access_key = creds['AccessKeyId']
     secret_key = creds['SecretAccessKey']
     session_token = creds['SessionToken']
+    expiration = creds['Expiration']
 
-    return AwsCredential(access_key, secret_key, session_token)
+    return AwsCredential(access_key, secret_key, session_token, expiration)
 
 
 _AWS4_HMAC_SHA256 = 'AWS4-HMAC-SHA256'
@@ -227,13 +230,14 @@ def _aws_auth_header(credentials, server_nonce, sts_host):
 
 
 def _handle_credentials(func):
+    @wraps(func)
     def inner(self, *args, **kwargs):
         global _cached_credentials
         try:
             return func(self, *args, **kwargs)
-        except Exception as e:
+        except Exception:
             _cached_credentials = None
-            raise e
+            raise
     return inner
 
 
