@@ -38,8 +38,13 @@ _AWS_EC2_URI = 'http://169.254.169.254/'
 _AWS_EC2_PATH = 'latest/meta-data/iam/security-credentials/'
 _AWS_HTTP_TIMEOUT = 10
 
-AwsCredential = namedtuple('AwsCredential', ['username', 'password', 'token', 'expiration'])
 """MONGODB-AWS credentials."""
+class AwsCredential:
+    def __init__(self, username, password, token, expiration=None):
+        self.username = username
+        self.password = password
+        self.token = token
+        self.expiration = expiration
 
 _cached_credentials = None
 _credential_buffer_seconds = 60 * 5
@@ -75,7 +80,7 @@ def _aws_temp_credentials():
     secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
     if access_key and secret_key:
         return AwsCredential(
-            access_key, secret_key, os.environ.get('AWS_SESSION_TOKEN'), None)
+            access_key, secret_key, os.environ.get('AWS_SESSION_TOKEN'))
 
     # Check to see if we have valid credentials.
     if creds and creds.expiration is not None:
