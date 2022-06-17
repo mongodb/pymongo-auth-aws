@@ -157,7 +157,7 @@ class TestAuthAws(unittest.TestCase):
 
     def test_web_identity(self):
         def get_key():
-            return os.urandom(20).decode('utf-8', 'replace')
+            return os.urandom(24).decode('utf-8', 'replace')
 
         fd, path = tempfile.mkstemp('web_identity')
         # From https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html.
