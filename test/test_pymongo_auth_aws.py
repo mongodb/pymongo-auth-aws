@@ -19,11 +19,10 @@ import os
 import sys
 import tempfile
 
-if sys.version_info[0] < 3:
-    from mock import patch
-else:
+try:
     from unittest.mock import patch
-
+except ImportError:
+    from mock import patch
 
 sys.path[0:0] = [""]
 
