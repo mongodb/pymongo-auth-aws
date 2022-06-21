@@ -92,9 +92,10 @@ pymongo-auth-aws requires `botocore`_ and `requests`_.
 Testing
 =======
 
-To run the test suite::
+Install the test dependencies and run the test suite.
 
-  $ python setup.py test
+  $ python -m pip install -e ".[test]"
+  $ python -m unittest discover ./test
 
 .. _MongoDB Community Forums:
    https://developer.mongodb.com/community/forums/tag/python-driver
