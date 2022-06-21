@@ -151,7 +151,7 @@ def _aws_temp_credentials():
     try:
         temp_user = res_json['AccessKeyId']
         temp_password = res_json['SecretAccessKey']
-        session_token = res_json['SessionToken']
+        session_token = res_json.get('SessionToken', res_json['Token'])
         expiration = res_json['Expiration']
     except KeyError:
         # If temporary credentials cannot be obtained then drivers MUST
