@@ -98,7 +98,9 @@ def _aws_temp_credentials():
             with open(irsa_web_id_file) as f:
                 irsa_web_id_token = f.read()
             role_session_name = os.getenv('AWS_ROLE_SESSION_NAME', 'pymongo-auth-aws')
-            return _irsa_assume_role(irsa_role_arn, irsa_web_id_token, role_session_name)
+            creds = _irsa_assume_role(irsa_role_arn, irsa_web_id_token, role_session_name)
+            _cached_credentials = creds
+            return creds
         except Exception as exc:
             raise PyMongoAuthAwsError(
                 'temporary MONGODB-AWS credentials could not be obtained, '
@@ -151,10 +153,7 @@ def _aws_temp_credentials():
     try:
         temp_user = res_json['AccessKeyId']
         temp_password = res_json['SecretAccessKey']
-        if 'SessionToken' in res_json:
-            session_token = res_json['SessionToken']
-        else:
-            session_token = res_json['Token']
+        session_token = res_json['Token']
         expiration = res_json['Expiration']
     except KeyError:
         # If temporary credentials cannot be obtained then drivers MUST
@@ -170,6 +169,7 @@ def _aws_temp_credentials():
 def _irsa_assume_role(role_arn, token, role_session_name):
     """Call sts:AssumeRoleWithWebIdentity and return temporary credentials."""
     sts_client = boto3.client('sts')
+    # See https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html.
     resp = sts_client.assume_role_with_web_identity(
         RoleArn=role_arn,
         RoleSessionName=role_session_name,
