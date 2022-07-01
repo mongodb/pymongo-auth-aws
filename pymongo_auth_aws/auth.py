@@ -46,8 +46,19 @@ class AwsCredential:
         self.token = token
         self.expiration = expiration
 
-_cached_credentials = None
+
 _credential_buffer_seconds = 60 * 5
+
+__cached_credentials = None
+
+def _get_cached_credentials():
+    """Central point for accessing cached credentials."""
+    return __cached_credentials
+
+def _set_cached_credentials(credentials):
+    """Central point for setting cached credentials."""
+    global __cached_credentials
+    __cached_credentials = credentials
 
 
 ZERO = timedelta(0)
@@ -72,9 +83,8 @@ utc = _UTC()
 
 def _aws_temp_credentials():
     """Construct temporary MONGODB-AWS credentials."""
-    global _cached_credentials
     # Store the variable locally for safe threaded access.
-    creds = _cached_credentials
+    creds = _get_cached_credentials()
 
     access_key = os.environ.get('AWS_ACCESS_KEY_ID')
     secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
@@ -99,7 +109,7 @@ def _aws_temp_credentials():
                 irsa_web_id_token = f.read()
             role_session_name = os.getenv('AWS_ROLE_SESSION_NAME', 'pymongo-auth-aws')
             creds = _irsa_assume_role(irsa_role_arn, irsa_web_id_token, role_session_name)
-            _cached_credentials = creds
+            _set_cached_credentials(creds)
             return creds
         except Exception as exc:
             raise PyMongoAuthAwsError(
@@ -162,7 +172,7 @@ def _aws_temp_credentials():
             'temporary MONGODB-AWS credentials could not be obtained')
 
     creds = AwsCredential(temp_user, temp_password, session_token, expiration)
-    _cached_credentials = creds
+    _set_cached_credentials(creds)
     return creds
 
 
@@ -240,11 +250,10 @@ def _aws_auth_header(credentials, server_nonce, sts_host):
 def _handle_credentials(func):
     @wraps(func)
     def inner(self, *args, **kwargs):
-        global _cached_credentials
         try:
             return func(self, *args, **kwargs)
         except Exception:
-            _cached_credentials = None
+            _set_cached_credentials(None)
             raise
     return inner
 
