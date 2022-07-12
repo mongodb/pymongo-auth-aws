@@ -173,6 +173,7 @@ def _aws_temp_credentials():
 
     creds = AwsCredential(temp_user, temp_password, session_token, expiration)
     _set_cached_credentials(creds)
+    raise ValueError(f'creds expire: {expiration}')
     return creds
 
 
