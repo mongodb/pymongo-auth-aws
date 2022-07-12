@@ -89,6 +89,7 @@ def _aws_temp_credentials():
     access_key = os.environ.get('AWS_ACCESS_KEY_ID')
     secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
     if access_key and secret_key:
+        raise ValueError('using os env creds')
         return AwsCredential(
             access_key, secret_key, os.environ.get('AWS_SESSION_TOKEN'))
 
@@ -173,7 +174,6 @@ def _aws_temp_credentials():
 
     creds = AwsCredential(temp_user, temp_password, session_token, expiration)
     _set_cached_credentials(creds)
-    raise ValueError(f'creds expire: {expiration}')
     return creds
 
 
