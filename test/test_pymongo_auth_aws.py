@@ -46,7 +46,7 @@ AWS_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%SZ"
 class TestAuthAws(unittest.TestCase):
 
     def setUp(self):
-        auth._cached_credentials = None
+        auth.set_cached_credentials(None)
         os.environ.pop('AWS_CONTAINER_CREDENTIALS_RELATIVE_URI', None)
         return unittest.TestCase.setUp(self)
 
@@ -141,7 +141,6 @@ class TestAuthAws(unittest.TestCase):
         self.ensure_equal(creds, expected)
 
     def test_cache_expires_soon(self):
-        auth._cached_credentials = None
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
         soon = datetime.now(auth.utc) + timedelta(minutes=1)
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=soon.strftime(AWS_DATE_FORMAT))
