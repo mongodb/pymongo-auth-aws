@@ -48,12 +48,25 @@ class AwsCredential:
 
 
 _credential_buffer_seconds = 60 * 5
-
 __cached_credentials = None
+__use_cached_credentials = None
+
+
+def get_use_cached_credentials():
+    """Determine whether we are using cached credentials."""
+    return __use_cached_credentials
+
+
+def set_use_cached_credentials(value):
+    """Set whether we are using cached credentials."""
+    global __use_cached_credentials
+    __use_cached_credentials = value
+
 
 def get_cached_credentials():
     """Central point for accessing cached credentials."""
     return __cached_credentials
+
 
 def set_cached_credentials(credentials):
     """Central point for setting cached credentials."""
@@ -84,7 +97,8 @@ utc = _UTC()
 def _aws_temp_credentials():
     """Construct temporary MONGODB-AWS credentials."""
     # Store the variable locally for safe threaded access.
-    creds = get_cached_credentials()
+    use_cached_credentials = get_use_cached_credentials()
+    creds = get_cached_credentials() if use_cached_credentials else None
 
     access_key = os.environ.get('AWS_ACCESS_KEY_ID')
     secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
@@ -109,7 +123,8 @@ def _aws_temp_credentials():
                 irsa_web_id_token = f.read()
             role_session_name = os.getenv('AWS_ROLE_SESSION_NAME', 'pymongo-auth-aws')
             creds = _irsa_assume_role(irsa_role_arn, irsa_web_id_token, role_session_name)
-            set_cached_credentials(creds)
+            if use_cached_credentials:
+                set_cached_credentials(creds)
             return creds
         except Exception as exc:
             raise PyMongoAuthAwsError(
@@ -172,7 +187,8 @@ def _aws_temp_credentials():
             'temporary MONGODB-AWS credentials could not be obtained')
 
     creds = AwsCredential(temp_user, temp_password, session_token, expiration)
-    set_cached_credentials(creds)
+    if use_cached_credentials:
+        set_cached_credentials(creds)
     return creds
 
 

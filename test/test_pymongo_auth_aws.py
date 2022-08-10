@@ -112,6 +112,7 @@ class TestAuthAws(unittest.TestCase):
         self.ensure_equal(creds, expected)
 
     def test_cache_credentials(self):
+        auth.set_use_cached_credentials(True)
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
         tomorrow = datetime.now(auth.utc) + timedelta(days=1)
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=tomorrow.strftime(AWS_DATE_FORMAT))
@@ -123,7 +124,25 @@ class TestAuthAws(unittest.TestCase):
         creds = _aws_temp_credentials()
         self.ensure_equal(creds, expected)
 
+    def test_caching_disabled(self):
+        auth.set_use_cached_credentials(False)
+        os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
+        soon = datetime.now(auth.utc) + timedelta(minutes=10)
+        expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=soon.strftime(AWS_DATE_FORMAT))
+        with requests_mock.Mocker() as m:
+            m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
+            creds = _aws_temp_credentials()
+        self.ensure_equal(creds, expected)
+
+        tomorrow = datetime.now(auth.utc) + timedelta(days=1)
+        expected['Expiration'] = tomorrow.strftime(AWS_DATE_FORMAT)
+        with requests_mock.Mocker() as m:
+            m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
+            creds = _aws_temp_credentials()
+        self.ensure_equal(creds, expected)
+
     def test_cache_expired(self):
+        auth.set_use_cached_credentials(True)
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
         expired = datetime.now(auth.utc) - timedelta(hours=1)
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=expired.strftime(AWS_DATE_FORMAT))
@@ -141,6 +160,7 @@ class TestAuthAws(unittest.TestCase):
         self.ensure_equal(creds, expected)
 
     def test_cache_expires_soon(self):
+        auth.set_use_cached_credentials(True)
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
         soon = datetime.now(auth.utc) + timedelta(minutes=1)
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=soon.strftime(AWS_DATE_FORMAT))
@@ -158,6 +178,8 @@ class TestAuthAws(unittest.TestCase):
         self.ensure_equal(creds, expected)
 
     def test_web_identity(self):
+        auth.set_use_cached_credentials(True)
+
         def get_key():
             return os.urandom(24).decode('utf-8', 'replace')
 
