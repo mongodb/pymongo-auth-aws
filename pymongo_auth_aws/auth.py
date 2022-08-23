@@ -47,7 +47,7 @@ class AwsCredential:
         self.expiration = expiration
 
 
-_credential_buffer_seconds = 60 * 5
+_credential_buffer_seconds = 60
 __cached_credentials = None
 __use_cached_credentials = None
 

@@ -162,7 +162,7 @@ class TestAuthAws(unittest.TestCase):
     def test_cache_expires_soon(self):
         auth.set_use_cached_credentials(True)
         os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] = 'foo'
-        soon = datetime.now(auth.utc) + timedelta(minutes=1)
+        soon = datetime.now(auth.utc) + timedelta(seconds=30)
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=soon.strftime(AWS_DATE_FORMAT))
         with requests_mock.Mocker() as m:
             m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
