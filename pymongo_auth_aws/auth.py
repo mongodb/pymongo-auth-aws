@@ -184,7 +184,8 @@ def _irsa_assume_role(role_arn, token, role_session_name):
         RoleSessionName=role_session_name,
         WebIdentityToken=token
     )
-    sts_client.close()
+    if hasattr(sts_client, 'close'):
+        sts_client.close()
     creds = resp['Credentials']
     access_key = creds['AccessKeyId']
     secret_key = creds['SecretAccessKey']
