@@ -111,6 +111,9 @@ def aws_temp_credentials():
         raise PyMongoAuthAwsError(
             'temporary MONGODB-AWS credentials could not be obtained')
 
+    # The botocore Credentials object does not expose the expiration
+    # directly, instead we use the refresh_needed method to determine
+    # whether the credentials are expired.
     refresh_needed = getattr(creds, 'refresh_needed', None)
     creds = AwsCredential(frozen.access_key, frozen.secret_key, frozen.token)
     # Only cache credentials that need to be refreshed from
