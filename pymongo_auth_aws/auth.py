@@ -41,6 +41,7 @@ class AwsCredential:
 _credential_buffer_seconds = 60
 __cached_credentials = None
 __use_cached_credentials = None
+__refresh_needed = None
 
 
 def get_use_cached_credentials():
@@ -56,13 +57,16 @@ def set_use_cached_credentials(value):
 
 def get_cached_credentials():
     """Central point for accessing cached credentials."""
-    return __cached_credentials
+    return __cached_credentials, __refresh_needed
 
 
-def set_cached_credentials(credentials):
+def set_cached_credentials(credentials, refresh_needed=None):
     """Central point for setting cached credentials."""
     global __cached_credentials
-    __cached_credentials = credentials
+    global __refresh_needed
+    if refresh_needed is None:
+        refresh_needed = lambda x: False
+    __cached_credentials, __refresh_needed = credentials, refresh_needed
 
 
 ZERO = timedelta(0)
@@ -89,23 +93,31 @@ def aws_temp_credentials():
     """Construct temporary MONGODB-AWS credentials."""
     # Store the variable locally for safe threaded access.
     use_cached_credentials = get_use_cached_credentials()
-    creds = get_cached_credentials() if use_cached_credentials else None
-    # Check to see if we have valid credentials.
-    if creds and not creds.refresh_needed(_credential_buffer_seconds):
-        return AwsCredential(creds.access_key, creds.secret_key, creds.token)
+    if use_cached_credentials:
+        creds, refresh_needed = get_cached_credentials()
+        # Check to see if we have valid credentials.
+        if creds and not refresh_needed(_credential_buffer_seconds):
+            return creds
 
     try:
         session = boto3.Session()
         creds = session.get_credentials()
-    except KeyError:
+        # Use frozen credentials to prevent a race condition.
+        frozen = creds.get_frozen_credentials()
+    except Exception:
         # If temporary credentials cannot be obtained then drivers MUST
         # fail authentication and raise an error.
+        set_cached_credentials(None)
         raise PyMongoAuthAwsError(
             'temporary MONGODB-AWS credentials could not be obtained')
 
-    if use_cached_credentials and hasattr(creds, 'refresh_needed'):
-        set_cached_credentials(creds)
-    return AwsCredential(creds.access_key, creds.secret_key, creds.token)
+    refresh_needed = getattr(creds, 'refresh_needed', None)
+    creds = AwsCredential(frozen.access_key, frozen.secret_key, frozen.token)
+    # Only cache credentials that need to be refreshed from
+    # an external source.
+    if use_cached_credentials and refresh_needed is not None:
+        set_cached_credentials(creds, refresh_needed)
+    return creds
 
 
 _AWS4_HMAC_SHA256 = 'AWS4-HMAC-SHA256'

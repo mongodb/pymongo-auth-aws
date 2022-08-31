@@ -20,7 +20,7 @@ setup(
     packages=find_packages(exclude=['test']),
     install_requires=['boto3', 'botocore'],
     extras_require={
-        "test": ["requests_mock", "pymongo", "mock;python_version<'3.3'"]
+        "test": ["pymongo"]
     },
     author="Shane Harvey",
     author_email="drivers-python-noreply@mongodb.com",

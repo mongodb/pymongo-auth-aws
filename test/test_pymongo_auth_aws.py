@@ -15,7 +15,11 @@
 """Test the pymongo-auth-aws module."""
 
 from datetime import datetime, timedelta
+from http.server import  SimpleHTTPRequestHandler
+import threading
+import json
 import os
+import socketserver
 import sys
 import tempfile
 
@@ -28,7 +32,6 @@ sys.path[0:0] = [""]
 
 import botocore.session
 from botocore.stub import Stubber
-import requests_mock
 
 import bson
 from bson.binary import Binary
@@ -40,15 +43,43 @@ from pymongo_auth_aws.errors import PyMongoAuthAwsError
 
 from test import unittest
 
+# Ensure we are not using a local credentials file.
 os.environ['AWS_SHARED_CREDENTIALS_FILE'] = '/tmp'
 AWS_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%SZ"
+PORT = 8000
+URI = f'http://localhost:{PORT}'
+RESPONSE = None
+
+
+class MockHandler(SimpleHTTPRequestHandler):
+    def do_GET(self):
+        global RESPONSE
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        output = json.dumps(RESPONSE)
+        self.wfile.write(output.encode('utf8'))
+
 
 class TestAuthAws(unittest.TestCase):
 
     def setUp(self):
         auth.set_cached_credentials(None)
-        os.environ.pop('AWS_CONTAINER_CREDENTIALS_RELATIVE_URI', None)
+        os.environ.pop('AWS_CONTAINER_CREDENTIALS_FULL_URI', None)
+        os.environ.pop('AWS_ACCESS_KEY_ID', None)
+        os.environ.pop('AWS_SECRET_ACCESS_KEY', None)
         return unittest.TestCase.setUp(self)
+
+    @classmethod
+    def setUpClass(cls):
+        cls.httpd = socketserver.TCPServer(("", PORT), MockHandler)
+        cls.thread = threading.Thread(target=cls.httpd.serve_forever, daemon=False)
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.thread.join()
 
     def assertVersionLike(self, version):
         self.assertTrue(isinstance(version, str), msg=version)
@@ -93,77 +124,75 @@ class TestAuthAws(unittest.TestCase):
         self.assertEqual(creds.token, None)
 
     def test_aws_temp_credentials(self):
-        os.environ['AWS_CONTAINER_CREDENTIALS_FULL_URI'] = uri = 'https://localhost'
-        expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration='2016-03-15T00:05:07Z')
-        with requests_mock.Mocker() as m:
-            m.get(uri, json=expected)
-            creds = aws_temp_credentials()
+        global RESPONSE
+        os.environ['AWS_CONTAINER_CREDENTIALS_FULL_URI'] = URI
+        expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration='2050-03-15T00:05:07Z')
+        RESPONSE = expected
+        creds = aws_temp_credentials()
         self.ensure_equal(creds, expected)
 
     def test_cache_credentials(self):
+        global RESPONSE
         auth.set_use_cached_credentials(True)
-        os.environ['AWS_CONTAINER_CREDENTIALS_FULL_URI'] = uri = 'https://localhost'
+        os.environ['AWS_CONTAINER_CREDENTIALS_FULL_URI'] = URI
         tomorrow = datetime.now(auth.utc) + timedelta(days=1)
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=tomorrow.strftime(AWS_DATE_FORMAT))
-        with requests_mock.Mocker() as m:
-            m.get(uri, json=expected)
-            creds = aws_temp_credentials()
+        RESPONSE = expected
+        creds = aws_temp_credentials()
         self.ensure_equal(creds, expected)
 
         creds = aws_temp_credentials()
         self.ensure_equal(creds, expected)
 
     def test_caching_disabled(self):
+        global RESPONSE
         auth.set_use_cached_credentials(False)
-        os.environ['AWS_CONTAINER_CREDENTIALS_FULL_URI'] = uri = 'https://localhost'
+        os.environ['AWS_CONTAINER_CREDENTIALS_FULL_URI'] = URI
         soon = datetime.now(auth.utc) + timedelta(minutes=10)
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=soon.strftime(AWS_DATE_FORMAT))
-        with requests_mock.Mocker() as m:
-            m.get(uri, json=expected)
-            creds = aws_temp_credentials()
+        RESPONSE = expected
+        creds = aws_temp_credentials()
         self.ensure_equal(creds, expected)
 
         tomorrow = datetime.now(auth.utc) + timedelta(days=1)
         expected['Expiration'] = tomorrow.strftime(AWS_DATE_FORMAT)
-        with requests_mock.Mocker() as m:
-            m.get('%sfoo' % auth._AWS_REL_URI, json=expected)
-            creds = aws_temp_credentials()
+        RESPONSE = expected
+        creds = aws_temp_credentials()
         self.ensure_equal(creds, expected)
 
     def test_cache_expired(self):
+        global RESPONSE
         auth.set_use_cached_credentials(True)
-        os.environ['AWS_CONTAINER_CREDENTIALS_FULL_URI'] = uri = 'https://localhost'
+        os.environ['AWS_CONTAINER_CREDENTIALS_FULL_URI'] = URI
         expired = datetime.now(auth.utc) - timedelta(hours=1)
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=expired.strftime(AWS_DATE_FORMAT))
-        with requests_mock.Mocker() as m:
-            m.get(uri, json=expected)
-            creds = aws_temp_credentials()
+        RESPONSE = expected
 
-        self.ensure_equal(creds, expected)
+        self.assertRaises(PyMongoAuthAwsError, aws_temp_credentials)
 
         expected['AccessKeyId'] = 'fizz'
-        with requests_mock.Mocker() as m:
-            m.get(uri, json=expected)
-            creds = aws_temp_credentials()
+        tomorrow = datetime.now(auth.utc) + timedelta(days=1)
+        expected['Expiration'] = tomorrow.strftime(AWS_DATE_FORMAT)
+        RESPONSE = expected
+        creds = aws_temp_credentials()
 
         self.ensure_equal(creds, expected)
 
     def test_cache_expires_soon(self):
+        global RESPONSE
         auth.set_use_cached_credentials(True)
-        os.environ['AWS_CONTAINER_CREDENTIALS_FULL_URI'] = uri = 'https://localhost'
+        os.environ['AWS_CONTAINER_CREDENTIALS_FULL_URI'] = URI
         soon = datetime.now(auth.utc) + timedelta(seconds=30)
         expected = dict(AccessKeyId='foo', SecretAccessKey='bar', Token='fizz', Expiration=soon.strftime(AWS_DATE_FORMAT))
-        with requests_mock.Mocker() as m:
-            m.get(uri, json=expected)
-            creds = aws_temp_credentials()
-
+        RESPONSE = expected
+        creds = aws_temp_credentials()
         self.ensure_equal(creds, expected)
 
         expected['AccessKeyId'] = 'fizz'
-        with requests_mock.Mocker() as m:
-            m.get(uri, json=expected)
-            creds = aws_temp_credentials()
-
+        tomorrow = datetime.now(auth.utc) + timedelta(days=1)
+        expected['Expiration'] = tomorrow.strftime(AWS_DATE_FORMAT)
+        RESPONSE = expected
+        creds = aws_temp_credentials()
         self.ensure_equal(creds, expected)
 
 
