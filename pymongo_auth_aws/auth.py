@@ -32,16 +32,16 @@ from pymongo_auth_aws.errors import PyMongoAuthAwsError
 
 """MONGODB-AWS credentials."""
 class AwsCredential:
-    def __init__(self, username, password, token):
+    def __init__(self, username, password, token, refresh_needed=None):
         self.username = username
         self.password = password
         self.token = token
+        self.refresh_needed = refresh_needed
 
 
 _credential_buffer_seconds = 60
 __cached_credentials = None
 __use_cached_credentials = None
-__refresh_needed = None
 
 
 def get_use_cached_credentials():
@@ -57,16 +57,19 @@ def set_use_cached_credentials(value):
 
 def get_cached_credentials():
     """Central point for accessing cached credentials."""
-    return __cached_credentials, __refresh_needed
+    global __cached_credentials
+    creds = __cached_credentials
+    if creds and creds.refresh_needed is not None:
+        if creds.refresh_needed(_credential_buffer_seconds):
+            creds = __cached_credentials = None
+    return creds
 
 
-def set_cached_credentials(credentials, refresh_needed=None):
+def set_cached_credentials(credentials):
     """Central point for setting cached credentials."""
     global __cached_credentials
-    global __refresh_needed
-    if refresh_needed is None:
-        refresh_needed = lambda x: False
-    __cached_credentials, __refresh_needed = credentials, refresh_needed
+    if __use_cached_credentials:
+        __cached_credentials = credentials
 
 
 ZERO = timedelta(0)
@@ -92,17 +95,15 @@ utc = _UTC()
 def aws_temp_credentials():
     """Construct temporary MONGODB-AWS credentials."""
     # Store the variable locally for safe threaded access.
-    use_cached_credentials = get_use_cached_credentials()
-    if use_cached_credentials:
-        creds, refresh_needed = get_cached_credentials()
-        # Check to see if we have valid credentials.
-        if creds and not refresh_needed(_credential_buffer_seconds):
-            return creds
+    creds = get_cached_credentials()
+    if creds:
+        return creds
 
     try:
         session = boto3.Session()
         creds = session.get_credentials()
-        # Use frozen credentials to prevent a race condition.
+        # Use frozen credentials to prevent a race condition if there
+        # is a refresh between property accesses.
         frozen = creds.get_frozen_credentials()
     except Exception:
         # If temporary credentials cannot be obtained then drivers MUST
@@ -115,11 +116,13 @@ def aws_temp_credentials():
     # directly, instead we use the refresh_needed method to determine
     # whether the credentials are expired.
     refresh_needed = getattr(creds, 'refresh_needed', None)
-    creds = AwsCredential(frozen.access_key, frozen.secret_key, frozen.token)
+    creds = AwsCredential(
+        frozen.access_key, frozen.secret_key, frozen.token, refresh_needed
+    )
     # Only cache credentials that need to be refreshed from
     # an external source.
-    if use_cached_credentials and refresh_needed is not None:
-        set_cached_credentials(creds, refresh_needed)
+    if refresh_needed is not None:
+        set_cached_credentials(creds)
     return creds
 
 
