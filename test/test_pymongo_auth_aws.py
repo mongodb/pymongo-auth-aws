@@ -73,7 +73,8 @@ class TestAuthAws(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.httpd = socketserver.TCPServer(("", PORT), MockHandler)
-        cls.thread = threading.Thread(target=cls.httpd.serve_forever, daemon=False)
+        cls.thread = threading.Thread(target=cls.httpd.serve_forever)
+        cls.thread.setDaemon(False)
         cls.thread.start()
 
     @classmethod
