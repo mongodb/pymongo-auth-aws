@@ -47,7 +47,7 @@ from test import unittest
 os.environ['AWS_SHARED_CREDENTIALS_FILE'] = '/tmp'
 AWS_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%SZ"
 PORT = 8000
-URI = f'http://localhost:{PORT}'
+URI = 'http://localhost:%s' % PORT
 RESPONSE = None
 
 
