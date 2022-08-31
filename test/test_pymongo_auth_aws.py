@@ -15,7 +15,6 @@
 """Test the pymongo-auth-aws module."""
 
 from datetime import datetime, timedelta
-from http.server import  SimpleHTTPRequestHandler
 import threading
 import json
 import os
@@ -24,9 +23,9 @@ import sys
 import tempfile
 
 try:
-    from unittest.mock import patch
-except ImportError:
-    from mock import patch
+    from http.server import  SimpleHTTPRequestHandler
+except ImportError:  # python 2
+    from SimpleHTTPServer  import SimpleHTTPRequestHandler
 
 sys.path[0:0] = [""]
 
