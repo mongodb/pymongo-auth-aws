@@ -18,14 +18,15 @@ from datetime import datetime, timedelta
 import threading
 import json
 import os
-import socketserver
 import sys
 import tempfile
 
 try:
     from http.server import  SimpleHTTPRequestHandler
+    import socketserver
 except ImportError:  # python 2
     from SimpleHTTPServer  import SimpleHTTPRequestHandler
+    import SocketServer as socketserver
 
 sys.path[0:0] = [""]
 
