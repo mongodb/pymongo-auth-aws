@@ -145,6 +145,23 @@ class TestAuthAws(unittest.TestCase):
         creds = aws_temp_credentials()
         self.ensure_equal(creds, expected)
 
+    def test_local_creds_not_cached(self):
+        os.environ['AWS_ACCESS_KEY_ID'] = 'foo'
+        os.environ['AWS_SECRET_ACCESS_KEY'] = 'bar'
+        creds = aws_temp_credentials()
+        self.assertEqual(creds.username, 'foo')
+        self.assertEqual(creds.password, 'bar')
+        self.assertEqual(creds.token, None)
+
+        os.environ['AWS_ACCESS_KEY_ID'] = 'fizz'
+        os.environ['AWS_SECRET_ACCESS_KEY'] = 'buzz'
+        creds = aws_temp_credentials()
+        del os.environ['AWS_ACCESS_KEY_ID']
+        del os.environ['AWS_SECRET_ACCESS_KEY']
+        self.assertEqual(creds.username, 'fizz')
+        self.assertEqual(creds.password, 'buzz')
+        self.assertEqual(creds.token, None)
+
     def test_caching_disabled(self):
         global RESPONSE
         auth.set_use_cached_credentials(False)
