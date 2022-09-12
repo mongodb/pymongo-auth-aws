@@ -22,8 +22,6 @@ from datetime import tzinfo, timedelta, datetime
 
 
 import boto3
-import requests
-
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 from botocore.credentials import Credentials
@@ -32,18 +30,13 @@ from botocore.utils import parse_to_aware_datetime
 from pymongo_auth_aws.errors import PyMongoAuthAwsError
 
 
-_AWS_REL_URI = 'http://169.254.170.2/'
-_AWS_EC2_URI = 'http://169.254.169.254/'
-_AWS_EC2_PATH = 'latest/meta-data/iam/security-credentials/'
-_AWS_HTTP_TIMEOUT = 10
-
 """MONGODB-AWS credentials."""
 class AwsCredential:
-    def __init__(self, username, password, token, expiration=None):
+    def __init__(self, username, password, token, refresh_needed=None):
         self.username = username
         self.password = password
         self.token = token
-        self.expiration = expiration
+        self.refresh_needed = refresh_needed
 
 
 _credential_buffer_seconds = 60
@@ -64,13 +57,19 @@ def set_use_cached_credentials(value):
 
 def get_cached_credentials():
     """Central point for accessing cached credentials."""
-    return __cached_credentials
+    global __cached_credentials
+    creds = __cached_credentials
+    if creds and creds.refresh_needed is not None:
+        if creds.refresh_needed(_credential_buffer_seconds):
+            creds = __cached_credentials = None
+    return creds
 
 
 def set_cached_credentials(credentials):
     """Central point for setting cached credentials."""
     global __cached_credentials
-    __cached_credentials = credentials
+    if __use_cached_credentials:
+        __cached_credentials = credentials
 
 
 ZERO = timedelta(0)
@@ -93,122 +92,38 @@ class _UTC(tzinfo):
 utc = _UTC()
 
 
-def _aws_temp_credentials():
+def aws_temp_credentials():
     """Construct temporary MONGODB-AWS credentials."""
     # Store the variable locally for safe threaded access.
-    use_cached_credentials = get_use_cached_credentials()
-    creds = get_cached_credentials() if use_cached_credentials else None
+    creds = get_cached_credentials()
+    if creds:
+        return creds
 
-    access_key = os.environ.get('AWS_ACCESS_KEY_ID')
-    secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
-    if access_key and secret_key:
-        return AwsCredential(
-            access_key, secret_key, os.environ.get('AWS_SESSION_TOKEN'))
-
-    # Check to see if we have valid credentials.
-    if creds and creds.expiration is not None:
-        now_utc = datetime.now(utc)
-        exp_utc = parse_to_aware_datetime(creds.expiration)
-        if (exp_utc - now_utc).total_seconds() >= _credential_buffer_seconds:
-            return creds
-
-    # Check if environment variables exposed by IAM Roles for Service Accounts (IRSA) are present.
-    # See https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html for details.
-    irsa_web_id_file = os.getenv('AWS_WEB_IDENTITY_TOKEN_FILE')
-    irsa_role_arn = os.getenv('AWS_ROLE_ARN')
-    if irsa_web_id_file and irsa_role_arn:
-        try:
-            with open(irsa_web_id_file) as f:
-                irsa_web_id_token = f.read()
-            role_session_name = os.getenv('AWS_ROLE_SESSION_NAME', 'pymongo-auth-aws')
-            creds = _irsa_assume_role(irsa_role_arn, irsa_web_id_token, role_session_name)
-            if use_cached_credentials:
-                set_cached_credentials(creds)
-            return creds
-        except Exception as exc:
-            raise PyMongoAuthAwsError(
-                'temporary MONGODB-AWS credentials could not be obtained, '
-                'error: %s' % (exc,))
-
-    # If the environment variable
-    # AWS_CONTAINER_CREDENTIALS_RELATIVE_URI is set then drivers MUST
-    # assume that it was set by an AWS ECS agent and use the URI
-    # http://169.254.170.2/$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI to
-    # obtain temporary credentials.
-    relative_uri = os.environ.get('AWS_CONTAINER_CREDENTIALS_RELATIVE_URI')
-    if relative_uri is not None:
-        try:
-            res = requests.get(_AWS_REL_URI+relative_uri,
-                               timeout=_AWS_HTTP_TIMEOUT)
-            res_json = res.json()
-        except (ValueError, requests.exceptions.RequestException) as exc:
-            raise PyMongoAuthAwsError(
-                'temporary MONGODB-AWS credentials could not be obtained, '
-                'error: %s' % (exc,))
-    else:
-        # If the environment variable AWS_CONTAINER_CREDENTIALS_RELATIVE_URI is
-        # not set drivers MUST assume we are on an EC2 instance and use the
-        # endpoint
-        # http://169.254.169.254/latest/meta-data/iam/security-credentials
-        # /<role-name>
-        # whereas role-name can be obtained from querying the URI
-        # http://169.254.169.254/latest/meta-data/iam/security-credentials/.
-        try:
-            # Get token
-            headers = {'X-aws-ec2-metadata-token-ttl-seconds': "30"}
-            res = requests.put(_AWS_EC2_URI+'latest/api/token',
-                               headers=headers, timeout=_AWS_HTTP_TIMEOUT)
-            token = res.content
-            # Get role name
-            headers = {'X-aws-ec2-metadata-token': token}
-            res = requests.get(_AWS_EC2_URI+_AWS_EC2_PATH, headers=headers,
-                               timeout=_AWS_HTTP_TIMEOUT)
-            role = res.text
-            # Get temp creds
-            res = requests.get(_AWS_EC2_URI+_AWS_EC2_PATH+role,
-                               headers=headers, timeout=_AWS_HTTP_TIMEOUT)
-            res_json = res.json()
-        except (ValueError, requests.exceptions.RequestException) as exc:
-            raise PyMongoAuthAwsError(
-                'temporary MONGODB-AWS credentials could not be obtained, '
-                'error: %s' % (exc,))
-
-    # See https://docs.aws.amazon.com/cli/latest/reference/sts/assume-role.html#examples for expected result format.
     try:
-        temp_user = res_json['AccessKeyId']
-        temp_password = res_json['SecretAccessKey']
-        session_token = res_json['Token']
-        expiration = res_json['Expiration']
-    except KeyError:
+        session = boto3.Session()
+        creds = session.get_credentials()
+        # Use frozen credentials to prevent a race condition if there
+        # is a refresh between property accesses.
+        frozen = creds.get_frozen_credentials()
+    except Exception:
         # If temporary credentials cannot be obtained then drivers MUST
         # fail authentication and raise an error.
+        set_cached_credentials(None)
         raise PyMongoAuthAwsError(
             'temporary MONGODB-AWS credentials could not be obtained')
 
-    creds = AwsCredential(temp_user, temp_password, session_token, expiration)
-    if use_cached_credentials:
+    # The botocore Credentials object does not expose the expiration
+    # directly, instead we use the refresh_needed method to determine
+    # whether the credentials are expired.
+    refresh_needed = getattr(creds, 'refresh_needed', None)
+    creds = AwsCredential(
+        frozen.access_key, frozen.secret_key, frozen.token, refresh_needed
+    )
+    # Only cache credentials that need to be refreshed from
+    # an external source.
+    if refresh_needed is not None:
         set_cached_credentials(creds)
     return creds
-
-
-def _irsa_assume_role(role_arn, token, role_session_name):
-    """Call sts:AssumeRoleWithWebIdentity and return temporary credentials."""
-    sts_client = boto3.client('sts')
-    # See https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html.
-    resp = sts_client.assume_role_with_web_identity(
-        RoleArn=role_arn,
-        RoleSessionName=role_session_name,
-        WebIdentityToken=token
-    )
-    if hasattr(sts_client, 'close'):
-        sts_client.close()
-    creds = resp['Credentials']
-    access_key = creds['AccessKeyId']
-    secret_key = creds['SecretAccessKey']
-    session_token = creds['SessionToken']
-    expiration = creds['Expiration']
-
-    return AwsCredential(access_key, secret_key, session_token, expiration)
 
 
 _AWS4_HMAC_SHA256 = 'AWS4-HMAC-SHA256'
@@ -314,7 +229,7 @@ class AwsSaslContext(object):
         # If a username and password are not provided, drivers MUST query
         # a link-local AWS address for temporary credentials.
         if self._credentials.username is None:
-            self._credentials = _aws_temp_credentials()
+            self._credentials = aws_temp_credentials()
 
         # Client first.
         client_nonce = os.urandom(32)
