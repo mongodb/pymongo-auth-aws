@@ -1,6 +1,16 @@
 Changelog
 =========
 
+Changes in Version 1.1.0
+------------------------
+
+- Use ``boto3`` to fetch on-demand credentials, expanding and standardizing authorization capabilities.
+- Enable opt-in caching of fetched on-demand credentials, to prevent rate
+limiting.
+- Make the ``pymongo.auth.aws_temp_credentials`` function public so it
+can be used in ``pymongocrypt``.
+
+
 Changes in Version 1.0.2
 ------------------------
 
