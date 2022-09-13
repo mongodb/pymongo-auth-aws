@@ -28,7 +28,7 @@ pymongo-auth-aws ships universal Python wheels.
 
      $ # Bump to release version number
      $ git commit -a -m "pymongo-auth-aws <release version number>"
-     $ git tag -a "pymongo-auth-aws <release version number>"
+     $ git tag -a <release version number> -m "pymongo-auth-aws <release version number>"
      $ # Bump to dev version number
      $ git commit -a -m "BUMP pymongo-auth-aws <release version number>"
      $ git push
