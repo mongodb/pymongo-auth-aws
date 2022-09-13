@@ -100,6 +100,8 @@ Install the test dependencies and run the test suite.
 .. _MongoDB Community Forums:
    https://developer.mongodb.com/community/forums/tag/python-driver
 
+.. _boto3: https://pypi.org/project/boto3/
+
 .. _botocore: https://pypi.org/project/botocore/
 
 .. _requests: https://pypi.org/project/requests/

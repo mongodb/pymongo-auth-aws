@@ -17,6 +17,7 @@ setup(
     version=version['__version__'],
     description="MONGODB-AWS authentication support for PyMongo",
     long_description=LONG_DESCRIPTION,
+    long_description_content_type='text/x-rst',
     packages=find_packages(exclude=['test']),
     install_requires=['boto3', 'botocore'],
     extras_require={
