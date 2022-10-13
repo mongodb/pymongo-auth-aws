@@ -4,7 +4,7 @@ Changelog
 Changes in Version 1.1.0
 ------------------------
 
-- Use ``boto3`` to fetch on-demand credentials, expanding and standardizing
+- Use ``boto3`` to handle `credentials_`, expanding and standardizing
   authorization capabilities.  This includes EKS IAM credentials that use
   ``AssumeRoleWithWebIdentity``.
 - Enable opt-in caching of fetched on-demand credentials, to prevent rate
@@ -12,6 +12,17 @@ Changes in Version 1.1.0
 - Make the ``pymongo_auth_aws.auth.aws_temp_credentials`` function public
   so it can be used in ``pymongocrypt``.
 
+
+Notes
+.....
+Because we are now using ``boto3`` to handle credentials, the order and
+locations of credentials are slightly different from before.  Particularly,
+if you have a shared AWS credentials or config file,
+then those credentials will be used by default if AWS auth environment
+variables are not set.  To override this behavior, set ``AWS_PROFILE=""`` in
+your shell or add ``os.environ["AWS_PROFILE"] = ""`` to your script or
+application.  Alternatively, you can create an AWS profile specifically for
+your MongoDB credentials and set ``AWS_PROFILE`` to that profile name.
 
 Changes in Version 1.0.2
 ------------------------
@@ -34,6 +45,9 @@ Changes in Version 1.0.0
 
 - Initial version.
 - Implements `MONGODB-AWS authentication`_ support for PyMongo.
+
+.. _credentials:
+   https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html
 
 .. _MONGODB-AWS authentication:
    https://github.com/mongodb/specifications/blob/8f16c36/source/auth/auth.rst#mongodb-aws
