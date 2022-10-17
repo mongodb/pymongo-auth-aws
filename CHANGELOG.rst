@@ -19,8 +19,9 @@ Because we are now using ``boto3`` to handle credentials, the order and
 locations of credentials are slightly different from before.  Particularly,
 if you have a shared AWS credentials or config file,
 then those credentials will be used by default if AWS auth environment
-variables are not set.  To override this behavior, set ``AWS_PROFILE=""`` in
-your shell or add ``os.environ["AWS_PROFILE"] = ""`` to your script or
+variables are not set.  To override this behavior, set
+``AWS_SHARED_CREDENTIALS_FILE=""`` in your shell or add
+``os.environ["AWS_SHARED_CREDENTIALS_FILE"] = ""`` to your script or
 application.  Alternatively, you can create an AWS profile specifically for
 your MongoDB credentials and set ``AWS_PROFILE`` to that profile name.
 
