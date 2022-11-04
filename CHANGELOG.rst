@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Changes in Version 1.1.1
+------------------------
+
+- Drop support for Python 3.4, since PyMongo 3.13 dropped Python 3.4 support.
+
 Changes in Version 1.1.0
 ------------------------
 
