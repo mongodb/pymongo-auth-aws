@@ -21,6 +21,7 @@ import json
 import os
 import socketserver
 import sys
+import unittest
 
 sys.path[0:0] = [""]
 
@@ -32,7 +33,6 @@ from pymongo_auth_aws import auth
 from pymongo_auth_aws.auth import _get_region, aws_temp_credentials, AwsSaslContext, AwsCredential
 from pymongo_auth_aws.errors import PyMongoAuthAwsError
 
-from test import unittest
 
 # Ensure we are not using a local credentials file.
 os.environ['AWS_SHARED_CREDENTIALS_FILE'] = '/tmp'
