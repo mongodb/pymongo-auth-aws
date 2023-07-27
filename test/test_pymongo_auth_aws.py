@@ -15,23 +15,14 @@
 """Test the pymongo-auth-aws module."""
 
 from datetime import datetime, timedelta
+from http.server import  SimpleHTTPRequestHandler
 import threading
 import json
 import os
+import socketserver
 import sys
-import tempfile
-
-try:
-    from http.server import  SimpleHTTPRequestHandler
-    import socketserver
-except ImportError:  # python 2
-    from SimpleHTTPServer  import SimpleHTTPRequestHandler
-    import SocketServer as socketserver
 
 sys.path[0:0] = [""]
-
-import botocore.session
-from botocore.stub import Stubber
 
 import bson
 from bson.binary import Binary

@@ -85,7 +85,7 @@ To install pymongo-auth-aws from source::
 Dependencies
 ============
 
-pymongo-auth-aws supports CPython 2.7, 3.4+, PyPy, and PyPy3.5+.
+pymongo-auth-aws supports CPython 3.7+ and PyPy3.7+.
 
 pymongo-auth-aws requires `botocore`_ and `requests`_.
 
@@ -95,7 +95,7 @@ Testing
 Install the test dependencies and run the test suite.
 
   $ python -m pip install -e ".[test]"
-  $ python -m unittest discover ./test
+  $ pytest
 
 .. _MongoDB Community Forums:
    https://developer.mongodb.com/community/forums/tag/python-driver
