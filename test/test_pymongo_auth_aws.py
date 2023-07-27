@@ -15,23 +15,15 @@
 """Test the pymongo-auth-aws module."""
 
 from datetime import datetime, timedelta
+from http.server import  SimpleHTTPRequestHandler
 import threading
 import json
 import os
+import socketserver
 import sys
-import tempfile
-
-try:
-    from http.server import  SimpleHTTPRequestHandler
-    import socketserver
-except ImportError:  # python 2
-    from SimpleHTTPServer  import SimpleHTTPRequestHandler
-    import SocketServer as socketserver
+import unittest
 
 sys.path[0:0] = [""]
-
-import botocore.session
-from botocore.stub import Stubber
 
 import bson
 from bson.binary import Binary
@@ -41,7 +33,6 @@ from pymongo_auth_aws import auth
 from pymongo_auth_aws.auth import _get_region, aws_temp_credentials, AwsSaslContext, AwsCredential
 from pymongo_auth_aws.errors import PyMongoAuthAwsError
 
-from test import unittest
 
 # Ensure we are not using a local credentials file.
 os.environ['AWS_SHARED_CREDENTIALS_FILE'] = '/tmp'

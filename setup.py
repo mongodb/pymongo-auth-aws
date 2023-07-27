@@ -21,15 +21,14 @@ setup(
     packages=find_packages(exclude=['test']),
     install_requires=['boto3', 'botocore'],
     extras_require={
-        "test": ["pymongo"]
+        "test": ["pymongo", "pytest"]
     },
     author="Shane Harvey",
     author_email="drivers-python-noreply@mongodb.com",
     url="https://github.com/mongodb/pymongo-auth-aws",
     keywords=["mongo", "mongodb", "pymongo-auth-aws", "pymongo", "MONGODB-AWS"],
-    test_suite="test",
     license="Apache License, Version 2.0",
-    python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*",
+    python_requires=">=3.7",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
@@ -37,16 +36,13 @@ setup(
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: Implementation :: CPython",
         "Programming Language :: Python :: Implementation :: PyPy",
         "Topic :: Database"]
