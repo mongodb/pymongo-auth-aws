@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=62.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pymongo-auth-aws"
+dynamic = ["version"]
+description = "MONGODB-AWS authentication support for PyMongo"
+readme = "README.rst"
+license = {file="LICENSE"}
+requires-python = ">=3.7"
+authors = [
+    { name = "Shane Harvey", email = "drivers-python-noreply@mongodb.com" },
+]
+keywords = [
+    "MONGODB-AWS",
+    "mongo",
+    "mongodb",
+    "pymongo",
+    "pymongo-auth-aws",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Database",
+]
+dependencies = [
+    "boto3",
+    "botocore",
+]
+
+[project.optional-dependencies]
+test = [
+    "pymongo",
+    "pytest",
+]
+
+[project.urls]
+Homepage = "https://github.com/mongodb/pymongo-auth-aws"
+
+[tool.setuptools.dynamic]
+version = {attr = "pymongo_aws_aws.version.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["pymongo_auth_aws"]
