@@ -52,7 +52,7 @@ test = [
 Homepage = "https://github.com/mongodb/pymongo-auth-aws"
 
 [tool.setuptools.dynamic]
-version = {attr = "pymongo_aws_aws.version.__version__"}
+version = {attr = "pymongo_auth_aws.version.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["pymongo_auth_aws"]
