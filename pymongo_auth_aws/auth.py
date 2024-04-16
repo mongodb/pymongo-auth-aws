@@ -18,19 +18,20 @@ import os
 from functools import wraps
 
 from base64 import standard_b64encode
-from datetime import tzinfo, timedelta, datetime
+from datetime import tzinfo, timedelta
 
 
 import boto3
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 from botocore.credentials import Credentials
-from botocore.utils import parse_to_aware_datetime
 
 from pymongo_auth_aws.errors import PyMongoAuthAwsError
 
 
 """MONGODB-AWS credentials."""
+
+
 class AwsCredential:
     def __init__(self, username, password, token, refresh_needed=None):
         self.username = username
@@ -77,6 +78,7 @@ ZERO = timedelta(0)
 # A Python 2.7-compliant UTC class (from stdlib docs).
 # When we drop Python 2.7 support we can use `timezone.utc` instead.
 
+
 class _UTC(tzinfo):
     """UTC"""
 
@@ -88,6 +90,7 @@ class _UTC(tzinfo):
 
     def dst(self, dt):
         return ZERO
+
 
 utc = _UTC()
 
@@ -109,16 +112,13 @@ def aws_temp_credentials():
         # If temporary credentials cannot be obtained then drivers MUST
         # fail authentication and raise an error.
         set_cached_credentials(None)
-        raise PyMongoAuthAwsError(
-            'temporary MONGODB-AWS credentials could not be obtained')
+        raise PyMongoAuthAwsError("temporary MONGODB-AWS credentials could not be obtained")
 
     # The botocore Credentials object does not expose the expiration
     # directly, instead we use the refresh_needed method to determine
     # whether the credentials are expired.
-    refresh_needed = getattr(creds, 'refresh_needed', None)
-    creds = AwsCredential(
-        frozen.access_key, frozen.secret_key, frozen.token, refresh_needed
-    )
+    refresh_needed = getattr(creds, "refresh_needed", None)
+    creds = AwsCredential(frozen.access_key, frozen.secret_key, frozen.token, refresh_needed)
     # Only cache credentials that need to be refreshed from
     # an external source.
     if refresh_needed is not None:
@@ -126,8 +126,8 @@ def aws_temp_credentials():
     return creds
 
 
-_AWS4_HMAC_SHA256 = 'AWS4-HMAC-SHA256'
-_AWS_SERVICE = 'sts'
+_AWS4_HMAC_SHA256 = "AWS4-HMAC-SHA256"
+_AWS_SERVICE = "sts"
 
 
 def _get_region(sts_host):
@@ -135,47 +135,39 @@ def _get_region(sts_host):
     # Drivers must also validate that the host is greater than 0 and
     # less than or equal to 255 bytes per RFC 1035.
     if not sts_host or len(sts_host) > 255:
-        raise PyMongoAuthAwsError(
-            "Server returned an invalid sts host: %s" % (sts_host,))
+        raise PyMongoAuthAwsError("Server returned an invalid sts host: %s" % (sts_host,))
 
-    parts = sts_host.split('.')
-    if len(parts) == 1 or sts_host == 'sts.amazonaws.com':
-        return 'us-east-1'  # Default
+    parts = sts_host.split(".")
+    if len(parts) == 1 or sts_host == "sts.amazonaws.com":
+        return "us-east-1"  # Default
 
     # Check for empty labels (eg "invalid..host" or ".invalid.host").
     if not all(parts):
-        raise PyMongoAuthAwsError(
-            "Server returned an invalid sts host: %s" % (sts_host,))
+        raise PyMongoAuthAwsError("Server returned an invalid sts host: %s" % (sts_host,))
 
     return parts[1]
 
 
 def _aws_auth_header(credentials, server_nonce, sts_host):
-    """Signature Version 4 Signing Process to construct the authorization header
-    """
+    """Signature Version 4 Signing Process to construct the authorization header"""
     region = _get_region(sts_host)
 
-    request_parameters = 'Action=GetCallerIdentity&Version=2011-06-15'
-    encoded_nonce = standard_b64encode(server_nonce).decode('utf8')
+    request_parameters = "Action=GetCallerIdentity&Version=2011-06-15"
+    encoded_nonce = standard_b64encode(server_nonce).decode("utf8")
     request_headers = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Content-Length': str(len(request_parameters)),
-        'Host': sts_host,
-        'X-MongoDB-Server-Nonce': encoded_nonce,
-        'X-MongoDB-GS2-CB-Flag': 'n',
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Length": str(len(request_parameters)),
+        "Host": sts_host,
+        "X-MongoDB-Server-Nonce": encoded_nonce,
+        "X-MongoDB-GS2-CB-Flag": "n",
     }
-    request = AWSRequest(method="POST", url="/", data=request_parameters,
-                         headers=request_headers)
-    boto_creds = Credentials(credentials.username, credentials.password,
-                             token=credentials.token)
+    request = AWSRequest(method="POST", url="/", data=request_parameters, headers=request_headers)
+    boto_creds = Credentials(credentials.username, credentials.password, token=credentials.token)
     auth = SigV4Auth(boto_creds, "sts", region)
     auth.add_auth(request)
-    final = {
-        'a': request.headers['Authorization'],
-        'd': request.headers['X-Amz-Date']
-    }
+    final = {"a": request.headers["Authorization"], "d": request.headers["X-Amz-Date"]}
     if credentials.token:
-        final['t'] = credentials.token
+        final["t"] = credentials.token
     return final
 
 
@@ -187,6 +179,7 @@ def _handle_credentials(func):
         except Exception:
             set_cached_credentials(None)
             raise
+
     return inner
 
 
@@ -196,6 +189,7 @@ class AwsSaslContext(object):
     :Parameters:
       - `credentials`: The :class:`AwsCredential` to use for authentication.
     """
+
     def __init__(self, credentials):
         self._credentials = credentials
         self._step = 0
@@ -220,7 +214,7 @@ class AwsSaslContext(object):
         elif self._step == 2:
             return self._second_payload(server_payload)
         else:
-            raise PyMongoAuthAwsError('MONGODB-AWS failed: too many steps')
+            raise PyMongoAuthAwsError("MONGODB-AWS failed: too many steps")
         pass
 
     @_handle_credentials
@@ -234,23 +228,21 @@ class AwsSaslContext(object):
         # Client first.
         client_nonce = os.urandom(32)
         self._client_nonce = client_nonce
-        payload = {'r': self.binary_type()(client_nonce), 'p': 110}
+        payload = {"r": self.binary_type()(client_nonce), "p": 110}
         return self.binary_type()(self.bson_encode(payload))
 
     @_handle_credentials
     def _second_payload(self, server_payload):
         """Return the second and final SASL payload."""
         if not server_payload:
-            raise PyMongoAuthAwsError(
-                'MONGODB-AWS failed: server payload empty')
+            raise PyMongoAuthAwsError("MONGODB-AWS failed: server payload empty")
 
         server_payload = self.bson_decode(server_payload)
-        server_nonce = server_payload['s']
-        if len(server_nonce) != 64 or not server_nonce.startswith(
-                self._client_nonce):
+        server_nonce = server_payload["s"]
+        if len(server_nonce) != 64 or not server_nonce.startswith(self._client_nonce):
             raise PyMongoAuthAwsError("Server returned an invalid nonce.")
 
-        sts_host = server_payload['h']
+        sts_host = server_payload["h"]
         payload = _aws_auth_header(self._credentials, server_nonce, sts_host)
         return self.binary_type()(self.bson_encode(payload))
 

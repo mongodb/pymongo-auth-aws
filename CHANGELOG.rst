@@ -10,7 +10,7 @@ Changes in Version 1.2.0
 Changes in Version 1.1.0
 ------------------------
 
-- Use ``boto3`` to handle `credentials_`, expanding and standardizing
+- Use ``boto3`` to handle ``credentials``, expanding and standardizing
   authorization capabilities.  This includes EKS IAM credentials that use
   ``AssumeRoleWithWebIdentity``.
 - Enable opt-in caching of fetched on-demand credentials, to prevent rate

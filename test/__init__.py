@@ -19,4 +19,5 @@ sys.path[0:0] = [""]
 # Enable the fault handler to dump the traceback of each running thread
 # after a segfault.
 import faulthandler
+
 faulthandler.enable()
