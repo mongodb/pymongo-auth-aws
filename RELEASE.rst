@@ -22,7 +22,7 @@ Release Process
 
 pymongo-auth-aws ships universal Python wheels.
 
-#. Add a changlog entry for this release in CHANGELOG.rst.
+#. Add a changelog entry for this release in CHANGELOG.rst.
 #. Bump "__version__" in pymongo-auth-aws/version.py. Commit the change and tag
    the release. Immediately bump the "__version__" to "dev0" in a new commit::
 
@@ -51,4 +51,3 @@ pymongo-auth-aws ships universal Python wheels.
 #. Upload all the release packages to PyPI with twine::
 
      $ python3 -m twine upload dist/*
-

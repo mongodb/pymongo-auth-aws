@@ -56,3 +56,18 @@ version = {attr = "pymongo_auth_aws.version.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["pymongo_auth_aws"]
+
+[tool.ruff]
+target-version = "py37"
+line-length = 100
+
+[tool.ruff.lint]
+unfixable = [
+  "RUF100", # Unused noqa
+  "T20",  # Removes print statements
+  "F401",  # Unused imports
+]
+
+[tool.ruff.lint.per-file-ignores]
+"pymongo_auth_aws/__init__.py" = ["F401"]
+"test/*.py" = ["E402"]
