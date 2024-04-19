@@ -1,2 +1,3 @@
 pymongo
 pytest
+dnspython>=2.6.1

@@ -8,7 +8,7 @@ dynamic = ["version", "dependencies", "optional-dependencies"]
 description = "MONGODB-AWS authentication support for PyMongo"
 readme = "README.rst"
 license = {file="LICENSE"}
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 authors = [
     { name = "Shane Harvey", email = "drivers-python-noreply@mongodb.com" },
 ]
@@ -27,7 +27,6 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: Implementation :: CPython",
