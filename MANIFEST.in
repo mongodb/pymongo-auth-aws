@@ -1,5 +1,0 @@
-include *.rst
-include requirements*.txt
-include *.json
-exclude *.yaml
-recursive-include test *.py
