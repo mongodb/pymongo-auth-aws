@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=62.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>1.24","hatch-requirements-txt>=0.4.1"]
+build-backend = "hatchling.build"
 
 [project]
 name = "pymongo-auth-aws"
@@ -40,11 +40,14 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/mongodb/pymongo-auth-aws"
 
-[tool.setuptools.dynamic]
-version = {attr = "pymongo_auth_aws.version.__version__"}
+[tool.hatch.version]
+path = "pymongo_auth_aws/version.py"
 
-[tool.setuptools.packages.find]
-include = ["pymongo_auth_aws"]
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ["requirements.txt"]
+
+[tool.hatch.metadata.hooks.requirements_txt.optional-dependencies]
+test = ["requirements-test.txt"]
 
 [tool.ruff]
 target-version = "py37"
