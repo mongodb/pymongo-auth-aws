@@ -84,7 +84,7 @@ tasks:
 buildvariants:
 - name: tests
   display_name: Run Tests
-  run_on: windows-64-vsMulti-small
+  run_on: rhel87-small
   tasks:
   - name: run-tests
 

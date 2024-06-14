@@ -5,7 +5,7 @@ set -eu
 
 # Fetch secrets
 bash ${DRIVERS_TOOLS}/.evergreen/auth_aws/setup-secrets.sh
-source secrets-export.sh
+source ${DRIVERS_TOOLS}/.evergreen/auth_aws/secrets-export.sh
 
 # Set up env
 pushd ..
