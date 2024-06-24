@@ -42,6 +42,7 @@ Homepage = "https://github.com/mongodb/pymongo-auth-aws"
 
 [tool.hatch.version]
 path = "pymongo_auth_aws/version.py"
+validate-bump = false
 
 [tool.hatch.metadata.hooks.requirements_txt]
 files = ["requirements.txt"]
