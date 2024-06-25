@@ -3,6 +3,10 @@ name: Python Dist
 on:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
   push:
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
@@ -16,6 +20,8 @@ jobs:
     environment: release
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.ref }}
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
