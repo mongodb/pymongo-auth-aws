@@ -4,8 +4,11 @@ Changelog
 Changes in Version 1.2.0
 ------------------------
 
-- Support Python versions 3.7-3.12, to align with PyMongo 4 supported versions.
-  Drop support for Python 2.7, 3.4, 3.5, and 3.6.
+- Support Python versions 3.8-3.12, to align with PyMongo 4 supported versions.
+  Drop support for Python 2.7, 3.4, 3.5, 3.6, and 3.7.
+- Add Secure Software Development Life Cycle automation to release process.
+  GitHub Releases now include a Software Bill of Materials, and signature
+  files corresponding to the distribution files released on PyPI.
 
 Changes in Version 1.1.0
 ------------------------
