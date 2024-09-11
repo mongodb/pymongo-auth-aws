@@ -1,6 +1,10 @@
 Changelog
 =========
 
+Changes in Version 1.3.0
+------------------------
+- Add support for Python 3.13.
+
 Changes in Version 1.2.0
 ------------------------
 
