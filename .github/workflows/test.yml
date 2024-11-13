@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
      - uses: actions/checkout@v2
+       with:
+          persist-credentials: false
      - uses: actions/setup-python@v4
      - name: "Run pre-commit"
        run: |
@@ -23,6 +25,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
