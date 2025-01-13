@@ -19,6 +19,6 @@ pip install "./mongo-python-driver[test]"
 pip install -e ./src
 
 pushd ./mongo-python-driver
-.evergreen/run-mongodb-aws-test.sh regular
+.evergreen/scripts/run-mongodb-aws-test.sh regular
 popd
 popd
