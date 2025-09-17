@@ -39,16 +39,16 @@ jobs:
     outputs:
       version: ${{ steps.pre-publish.outputs.version }}
     steps:
-      - uses: mongodb-labs/drivers-github-tools/secure-checkout@DRIVERS-3232
+      - uses: mongodb-labs/drivers-github-tools/secure-checkout@DRIVERS-3232-fix
         with:
           app_id: ${{ vars.APP_ID }}
           private_key: ${{ secrets.APP_PRIVATE_KEY }}
-      - uses: mongodb-labs/drivers-github-tools/setup@DRIVERS-3232
+      - uses: mongodb-labs/drivers-github-tools/setup@DRIVERS-3232-fix
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region_name: ${{ vars.AWS_REGION_NAME }}
           aws_secret_id: ${{ secrets.AWS_SECRET_ID }}
-      - uses: mongodb-labs/drivers-github-tools/python/pre-publish@DRIVERS-3232
+      - uses: mongodb-labs/drivers-github-tools/python/pre-publish@DRIVERS-3232-fix
         id: pre-publish
         with:
           version: ${{ env.VERSION }}
@@ -99,16 +99,16 @@ jobs:
       attestations: write
       security-events: write
     steps:
-      - uses: mongodb-labs/drivers-github-tools/secure-checkout@DRIVERS-3232
+      - uses: mongodb-labs/drivers-github-tools/secure-checkout@DRIVERS-3232-fix
         with:
           app_id: ${{ vars.APP_ID }}
           private_key: ${{ secrets.APP_PRIVATE_KEY }}
-      - uses: mongodb-labs/drivers-github-tools/setup@DRIVERS-3232
+      - uses: mongodb-labs/drivers-github-tools/setup@DRIVERS-3232-fix
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region_name: ${{ vars.AWS_REGION_NAME }}
           aws_secret_id: ${{ secrets.AWS_SECRET_ID }}
-      - uses: mongodb-labs/drivers-github-tools/python/post-publish@DRIVERS-3232
+      - uses: mongodb-labs/drivers-github-tools/python/post-publish@DRIVERS-3232-fix
         with:
           version: ${{ env.VERSION }}
           following_version: ${{ env.FOLLOWING_VERSION }}
