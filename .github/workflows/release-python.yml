@@ -39,7 +39,7 @@ jobs:
     outputs:
       version: ${{ steps.pre-publish.outputs.version }}
     steps:
-      - uses: mongodb-labs/drivers-github-tools/secure-checkout@PYTHON-3152-auth-fix
+      - uses: mongodb-labs/drivers-github-tools/secure-checkout@v3
         with:
           app_id: ${{ vars.APP_ID }}
           private_key: ${{ secrets.APP_PRIVATE_KEY }}
@@ -48,7 +48,7 @@ jobs:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region_name: ${{ vars.AWS_REGION_NAME }}
           aws_secret_id: ${{ secrets.AWS_SECRET_ID }}
-      - uses: mongodb-labs/drivers-github-tools/python/pre-publish@PYTHON-3152-auth-fix
+      - uses: mongodb-labs/drivers-github-tools/python/pre-publish@v3
         id: pre-publish
         with:
           version: ${{ env.VERSION }}
@@ -99,7 +99,7 @@ jobs:
       attestations: write
       security-events: write
     steps:
-      - uses: mongodb-labs/drivers-github-tools/secure-checkout@PYTHON-3152-auth-fix
+      - uses: mongodb-labs/drivers-github-tools/secure-checkout@v3
         with:
           app_id: ${{ vars.APP_ID }}
           private_key: ${{ secrets.APP_PRIVATE_KEY }}
@@ -108,7 +108,7 @@ jobs:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region_name: ${{ vars.AWS_REGION_NAME }}
           aws_secret_id: ${{ secrets.AWS_SECRET_ID }}
-      - uses: mongodb-labs/drivers-github-tools/python/post-publish@PYTHON-3152-auth-fix
+      - uses: mongodb-labs/drivers-github-tools/python/post-publish@v3
         with:
           version: ${{ env.VERSION }}
           following_version: ${{ env.FOLLOWING_VERSION }}
