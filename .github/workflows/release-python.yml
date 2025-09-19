@@ -108,7 +108,7 @@ jobs:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region_name: ${{ vars.AWS_REGION_NAME }}
           aws_secret_id: ${{ secrets.AWS_SECRET_ID }}
-      - uses: mongodb-labs/drivers-github-tools/python/post-publish@PYTHON-3152-python-fix
+      - uses: mongodb-labs/drivers-github-tools/python/post-publish@v3
         with:
           version: ${{ env.VERSION }}
           following_version: ${{ env.FOLLOWING_VERSION }}
