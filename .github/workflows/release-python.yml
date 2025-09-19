@@ -43,7 +43,7 @@ jobs:
         with:
           app_id: ${{ vars.APP_ID }}
           private_key: ${{ secrets.APP_PRIVATE_KEY }}
-      - uses: mongodb-labs/drivers-github-tools/setup@PYTHON-3152-auth-fix
+      - uses: mongodb-labs/drivers-github-tools/setup@v3
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region_name: ${{ vars.AWS_REGION_NAME }}
@@ -103,12 +103,12 @@ jobs:
         with:
           app_id: ${{ vars.APP_ID }}
           private_key: ${{ secrets.APP_PRIVATE_KEY }}
-      - uses: mongodb-labs/drivers-github-tools/setup@PYTHON-3152-auth-fix
+      - uses: mongodb-labs/drivers-github-tools/setup@v3
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region_name: ${{ vars.AWS_REGION_NAME }}
           aws_secret_id: ${{ secrets.AWS_SECRET_ID }}
-      - uses: mongodb-labs/drivers-github-tools/python/post-publish@v3
+      - uses: mongodb-labs/drivers-github-tools/python/post-publish@PYTHON-3152-python-fix
         with:
           version: ${{ env.VERSION }}
           following_version: ${{ env.FOLLOWING_VERSION }}
