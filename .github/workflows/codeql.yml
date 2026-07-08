@@ -41,19 +41,14 @@ jobs:
       matrix:
         include:
         - language: python
-          build-mode: manual
-          manual-build-command: pip install -e .
         - language: actions
-          build-mode: none
-          manual-build-command: ''
 
     steps:
     - name: Run CodeQL analysis
       uses: mongodb-labs/drivers-github-tools/codeql@v3
       with:
         language: ${{ matrix.language }}
-        build-mode: ${{ matrix.build-mode }}
-        manual-build-command: ${{ matrix.manual-build-command }}
+        build-mode: none
         ref: ${{ inputs.ref }}
         # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
         queries: security-extended
