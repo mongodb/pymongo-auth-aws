@@ -44,34 +44,14 @@ jobs:
         - language: actions
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - name: Run CodeQL analysis
+      uses: mongodb-labs/drivers-github-tools/codeql@v3
       with:
-        ref: ${{ inputs.ref }}
-        persist-credentials: false
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.x
-
-    # Initializes the CodeQL tools for scanning.
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@28deaeda66b76a05916b6923827895f2b14ab387 # v3
-      with:
-        languages: ${{ matrix.language }}
+        language: ${{ matrix.language }}
         build-mode: none
+        ref: ${{ inputs.ref }}
         # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
         queries: security-extended
         config: |
           paths-ignore:
             - 'test/**'
-
-    - shell: bash
-      if: matrix.language == 'python'
-      run: |
-        pip install -e .
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@28deaeda66b76a05916b6923827895f2b14ab387 # v3
-      with:
-        category: "/language:${{ matrix.language }}"
