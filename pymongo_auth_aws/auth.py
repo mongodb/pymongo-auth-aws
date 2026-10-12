@@ -18,7 +18,7 @@ import os
 from functools import wraps
 
 from base64 import standard_b64encode
-from datetime import tzinfo, timedelta
+from datetime import timezone
 
 
 import boto3
@@ -73,26 +73,7 @@ def set_cached_credentials(credentials):
         __cached_credentials = credentials
 
 
-ZERO = timedelta(0)
-
-# A Python 2.7-compliant UTC class (from stdlib docs).
-# When we drop Python 2.7 support we can use `timezone.utc` instead.
-
-
-class _UTC(tzinfo):
-    """UTC"""
-
-    def utcoffset(self, dt):
-        return ZERO
-
-    def tzname(self, dt):
-        return "UTC"
-
-    def dst(self, dt):
-        return ZERO
-
-
-utc = _UTC()
+utc = timezone.utc
 
 
 def aws_temp_credentials():
