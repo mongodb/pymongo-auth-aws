@@ -85,7 +85,7 @@ To install pymongo-auth-aws from source::
 Dependencies
 ============
 
-pymongo-auth-aws supports CPython 3.7+ and PyPy3.7+.
+pymongo-auth-aws supports CPython 3.11+ and PyPy 3.11+.
 
 pymongo-auth-aws requires `botocore`_ and `requests`_.
 

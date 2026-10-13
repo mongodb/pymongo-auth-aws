@@ -69,7 +69,7 @@ class TestAuthAws(unittest.TestCase):
     def setUpClass(cls):
         cls.httpd = socketserver.TCPServer(("", PORT), MockHandler)
         cls.thread = threading.Thread(target=cls.httpd.serve_forever)
-        cls.thread.setDaemon(False)
+        cls.thread.daemon = False
         cls.thread.start()
 
     @classmethod
@@ -254,9 +254,6 @@ class TestAwsSaslContext(unittest.TestCase):
         test = _AwsSaslContext(creds)
         response = bson.decode(test.step(None))
         nonce = response["r"] + os.urandom(32)
-        # Python 2.7 support.
-        if sys.version_info[0] == 2:
-            nonce = Binary(nonce)
         payload = bson.encode(dict(s=nonce, h="foo.com"))
         response = test.step(payload)
         self.assertIsInstance(response, Binary)
