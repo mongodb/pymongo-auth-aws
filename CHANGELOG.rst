@@ -3,7 +3,7 @@ Changelog
 
 Changes in Version 1.5.0
 ------------------------
-- Add support for Python 3.14.
+- Add support for Python 3.14 and 3.15.
 - Drop support for Python 3.9 and 3.10.
 
 Changes in Version 1.4.0
